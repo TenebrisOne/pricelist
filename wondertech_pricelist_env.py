@@ -40,8 +40,8 @@ CONFIG = {
     "ciudad": "BOGOTA",
     "moneda": "COP",
 
-    # Vigencia
-    "vigencia": "VALIDO DEL 1/04/2026 AL 18/04/2026",
+    # Vigencia (texto compacto para el banner)
+    "vigencia": "VIGENCIA: 01/04/2026 — 18/04/2026 | IVA INCLUIDO | SUJETO A DISPONIBILIDAD",
 
     # Footer
     "empresa": "WONDERTECH",
@@ -312,92 +312,87 @@ def formatear_precio(precio, simbolo="$"):
 
 
 # ─────────────────────────────────────────────────────────────
-#  📄  GENERACIÓN DEL PDF
+#  📄  GENERACIÓN DEL PDF - DISEÑO PROFESIONAL
 # ─────────────────────────────────────────────────────────────
 def generar_pdf(nombre_lista, productos, cfg):
     # Crear directorio de salida si no existe
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "PDFs", "output")
     os.makedirs(output_dir, exist_ok=True)
-    
-    nombre_archivo = f"Lista_{nombre_lista.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+
+    nombre_archivo = f"Lista_{nombre_lista.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
     ruta_completa = os.path.join(output_dir, nombre_archivo)
-    
+
     doc = SimpleDocTemplate(
         ruta_completa,
         pagesize=landscape(A4),
-        leftMargin=1.5 * cm,
-        rightMargin=1.5 * cm,
-        topMargin=1.5 * cm,
-        bottomMargin=2 * cm,
+        leftMargin=1.0 * cm,
+        rightMargin=1.0 * cm,
+        topMargin=1.0 * cm,
+        bottomMargin=1.5 * cm,
         title=f"Lista de Precios - {nombre_lista}",
         author=cfg["empresa"],
     )
 
     story = []
 
-    estilo_titulo = ParagraphStyle(
-        "titulo", fontSize=26, textColor=ROJO_W,
+    # ── HEADER PROFESIONAL ──
+    header_style = ParagraphStyle(
+        "header", fontSize=18, textColor=ROJO_W,
+        fontName="Helvetica-Bold", alignment=TA_CENTER, spaceAfter=0
+    )
+    lista_style = ParagraphStyle(
+        "lista", fontSize=14, textColor=GRIS_OSC,
         fontName="Helvetica-Bold", alignment=TA_CENTER, spaceAfter=2
     )
-    estilo_sub = ParagraphStyle(
-        "sub", fontSize=11, textColor=GRIS_OSC,
-        fontName="Helvetica", alignment=TA_CENTER, spaceAfter=4
-    )
-    estilo_empresa = ParagraphStyle(
-        "empresa", fontSize=9, textColor=colors.grey,
-        fontName="Helvetica", alignment=TA_CENTER
+    contacto_style = ParagraphStyle(
+        "contacto", fontSize=7, textColor=GRIS_OSC,
+        fontName="Helvetica", alignment=TA_CENTER, spaceAfter=2
     )
 
-    story.append(Paragraph(f"🏢  {cfg['empresa']}", estilo_sub))
-    story.append(Paragraph("LISTA DE PRECIOS", estilo_titulo))
-    story.append(Paragraph(f"{nombre_lista}", estilo_sub))
+    story.append(Paragraph(cfg["empresa"], header_style))
+    story.append(Paragraph(f"LISTA DE PRECIOS — {nombre_lista.upper()}", lista_style))
+    story.append(Paragraph(
+        f"{cfg['telefono']}  |  {cfg['web']}  |  {cfg['direccion']}",
+        contacto_style
+    ))
     story.append(HRFlowable(width="100%", thickness=2, color=ROJO_W, spaceAfter=4))
 
-    contacto = (
-        f"📞 {cfg['telefono']}   |   "
-        f"🌐 {cfg['web']}   |   "
-        f"📍 {cfg['direccion']}"
-    )
-    story.append(Paragraph(contacto, estilo_empresa))
-    story.append(Spacer(1, 6))
-
-    estilo_vigencia = ParagraphStyle(
-        "vigencia", fontSize=8, textColor=BLANCO,
+    # ── BANNER DE VIGENCIA COMPACTO ──
+    vigencia_style = ParagraphStyle(
+        "vigencia", fontSize=7.5, textColor=BLANCO,
         fontName="Helvetica-Bold", alignment=TA_CENTER,
-        backColor=ROJO_W, borderPadding=4, spaceAfter=8
+        backColor=ROJO_W, borderPadding=3, spaceAfter=6
     )
-    story.append(Paragraph(
-        f"{cfg['vigencia']}  PRECIOS INCLUIDO (SI APLICA)  SUJETO A DISPONIBILIDAD - PRECIO NO INCLUYE FLETE",
-        estilo_vigencia
-    ))
+    story.append(Paragraph(cfg["vigencia"], vigencia_style))
 
+    # ── TABLA OPTIMIZADA ──
     col_widths = [
-        2.5 * cm,
-        3.0 * cm,
-        14.0 * cm,
-        2.0 * cm,
-        3.5 * cm,
+        2.8 * cm,   # MARCA
+        3.2 * cm,   # SKU
+        15.5 * cm,  # DESCRIPCIÓN (expandido)
+        2.2 * cm,   # TIPO MONEDA
+        3.8 * cm,   # PRECIO
     ]
 
+    header_style = ParagraphStyle(
+        "hdr", fontSize=7.5, fontName="Helvetica-Bold",
+        textColor=BLANCO, alignment=TA_CENTER, leading=9
+    )
     encabezado = [
-        Paragraph("<b>MARCA</b>", _cel_header()),
-        Paragraph("<b>SKU</b>", _cel_header()),
-        Paragraph("<b>DESCRIPCIÓN</b>", _cel_header()),
-        Paragraph("<b>TIPO<br/>MONEDA</b>", _cel_header()),
-        Paragraph("<b>PRECIO IVA<br/>INCLUIDO SI<br/>APLICA</b>", _cel_header()),
+        Paragraph("MARCA", header_style),
+        Paragraph("SKU", header_style),
+        Paragraph("DESCRIPCIÓN", header_style),
+        Paragraph("MONEDA", header_style),
+        Paragraph("PRECIO<br/>IVA INCL.", header_style),
     ]
 
     filas = [encabezado]
-    estilo_cel = ParagraphStyle("cel", fontSize=7, fontName="Helvetica", leading=9, wordWrap="CJK")
-    estilo_cel_c = ParagraphStyle("celc", fontSize=7, fontName="Helvetica", leading=9, alignment=TA_CENTER)
-    estilo_precio = ParagraphStyle(
-        "precio", fontSize=8, fontName="Helvetica-Bold",
-        leading=10, alignment=TA_RIGHT, textColor=GRIS_OSC
-    )
-    estilo_categoria_header = ParagraphStyle(
-        "cat_header", fontSize=9, fontName="Helvetica-Bold",
-        leading=11, textColor=BLANCO, alignment=TA_LEFT, leftPadding=6
-    )
+    
+    # Estilos de celda
+    cell_style = ParagraphStyle("cell", fontSize=7, fontName="Helvetica", leading=8.5)
+    cell_center = ParagraphStyle("cell_c", fontSize=7, fontName="Helvetica", leading=8.5, alignment=TA_CENTER)
+    price_style = ParagraphStyle("price", fontSize=7.5, fontName="Helvetica-Bold", leading=9, alignment=TA_RIGHT, textColor=GRIS_OSC)
+    cat_style = ParagraphStyle("cat", fontSize=8.5, fontName="Helvetica-Bold", leading=10, textColor=BLANCO, alignment=TA_CENTER)
 
     # Agrupar productos por categoría
     productos_por_categoria = defaultdict(list)
@@ -405,102 +400,104 @@ def generar_pdf(nombre_lista, productos, cfg):
         cat = p["categoria"] if p["categoria"] else "SIN CATEGORÍA"
         productos_por_categoria[cat].append(p)
 
-    # Agregar filas agrupadas por categoría
+    # Construir filas con separadores por categoría
     for categoria, productos_cat in sorted(productos_por_categoria.items()):
-        # Fila de encabezado de categoría
+        # Fila separadora de categoría (una sola celda que abarca todo)
         fila_categoria = [
-            Paragraph(f"<b>{categoria}</b>", estilo_categoria_header),
-            Paragraph("", estilo_cel_c),
-            Paragraph("", estilo_cel_c),
-            Paragraph("", estilo_cel_c),
-            Paragraph("", estilo_cel_c),
+            Paragraph(f"■  {categoria.upper()}  ■", cat_style),
         ]
         filas.append(fila_categoria)
 
-        # Productos de esta categoría
+        # Filas de productos
         for p in productos_cat:
             fila = [
-                Paragraph(p["marca"], estilo_cel_c),
-                Paragraph(p["sku"], estilo_cel_c),
-                Paragraph(p["descripcion"], estilo_cel),
-                Paragraph(cfg["moneda"], estilo_cel_c),
-                Paragraph(formatear_precio(p["precio"], cfg.get("simbolo_moneda", "$")), estilo_precio),
+                Paragraph(p["marca"], cell_center),
+                Paragraph(p["sku"], cell_center),
+                Paragraph(p["descripcion"], cell_style),
+                Paragraph(cfg["moneda"], cell_center),
+                Paragraph(formatear_precio(p["precio"], cfg.get("simbolo_moneda", "$")), price_style),
             ]
             filas.append(fila)
 
+    # Crear tabla
     tabla = Table(filas, colWidths=col_widths, repeatRows=1)
-    
-    # Construir reglas de estilo dinámicas
+
+    # ── ESTILOS DINÁMICOS DE TABLA ──
     style_rules = [
+        # Header de tabla
         ("BACKGROUND", (0, 0), (-1, 0), GRIS_OSC),
-        ("TEXTCOLOR", (0, 0), (-1, 0), BLANCO),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, 0), 8),
+        ("FONTSIZE", (0, 0), (-1, 0), 7.5),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
         ("TOPPADDING", (0, 0), (-1, 0), 5),
         ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
+        ("LINEBELOW", (0, 0), (-1, 0), 2, ROJO_W),
+        
+        # Filas de datos
         ("FONTSIZE", (0, 1), (-1, -1), 7),
         ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 1), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#BDC3C7")),
-        ("LINEBELOW", (0, 0), (-1, 0), 1.5, ROJO_W),
+        ("TOPPADDING", (0, 1), (-1, -1), 2.5),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 2.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        
+        # Líneas de grid sutiles
+        ("LINEABOVE", (0, 1), (-1, -1), 0.2, colors.HexColor("#D5DBDB")),
+        ("LINEBELOW", (0, 1), (-1, -1), 0.2, colors.HexColor("#D5DBDB")),
     ]
-    
-    # Identificar filas de categoría para aplicar estilo especial
+
+    # Aplicar estilos por fila
     row_idx = 1
     for categoria, productos_cat in sorted(productos_por_categoria.items()):
-        # Estilo para la fila de encabezado de categoría
+        # Estilo para fila de categoría (fondo rojo, celdas combinadas)
         style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), ROJO_W))
-        style_rules.append(("TOPPADDING", (0, row_idx), (-1, row_idx), 6))
-        style_rules.append(("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 6))
+        style_rules.append(("SPAN", (0, row_idx), (-1, row_idx)))  # Combinar todas las columnas
+        style_rules.append(("TOPPADDING", (0, row_idx), (-1, row_idx), 5))
+        style_rules.append(("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 5))
+        style_rules.append(("LINEABOVE", (0, row_idx), (-1, row_idx), 1.5, GRIS_OSC))
         style_rules.append(("LINEBELOW", (0, row_idx), (-1, row_idx), 1.5, GRIS_OSC))
-        row_idx += 1  # Encabezado categoría
-        
-        # Estilo para productos de esta categoría
+        row_idx += 1
+
+        # Estilo para productos (alternancia sutil)
         for i in range(len(productos_cat)):
-            if (row_idx % 2) == 0:
-                style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), GRIS_CLR))
-            else:
-                style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), BLANCO))
+            # Alternancia más sutil: blanco y gris muy claro
+            bg_color = colors.HexColor("#F8F9FA") if (row_idx % 2) == 0 else BLANCO
+            style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), bg_color))
             row_idx += 1
-    
+
     tabla.setStyle(TableStyle(style_rules))
     story.append(tabla)
 
-    story.append(Spacer(1, 8))
-    story.append(HRFlowable(width="100%", thickness=1, color=ROJO_W))
-    estilo_footer = ParagraphStyle(
-        "footer", fontSize=7, textColor=colors.grey,
-        fontName="Helvetica", alignment=TA_CENTER, spaceBefore=4
+    # ── FOOTER MINIMALISTA ──
+    story.append(Spacer(1, 6))
+    footer_line = HRFlowable(width="100%", thickness=1, color=ROJO_W, spaceAfter=3)
+    story.append(footer_line)
+
+    footer_style = ParagraphStyle(
+        "footer", fontSize=6.5, textColor=colors.HexColor("#7F8C8D"),
+        fontName="Helvetica", alignment=TA_CENTER, leading=8
     )
     story.append(Paragraph(
-        f"<b>{cfg['empresa']}</b>  |  {cfg['web']}  |  "
-        f"PBX: {cfg['telefono']}  |  {cfg['direccion']}",
-        estilo_footer
+        f"{cfg['web']}  |  PBX: {cfg['telefono']}  |  {cfg['direccion']}",
+        footer_style
     ))
 
+    # ── PAGINACIÓN MEJORADA ──
     def on_page(canvas, doc):
         canvas.saveState()
-        canvas.setFont("Helvetica", 7)
-        canvas.setFillColor(colors.grey)
-        canvas.drawRightString(doc.pagesize[0] - 1.5 * cm, 1.2 * cm, f"Página {doc.page}")
+        canvas.setFont("Helvetica", 6.5)
+        canvas.setFillColor(colors.HexColor("#95A5A6"))
+        
+        page_num = f"Página {doc.page}"
+        canvas.drawString(doc.leftMargin, 0.8 * cm, cfg["empresa"])
+        canvas.drawRightString(doc.pagesize[0] - doc.rightMargin, 0.8 * cm, page_num)
+        
         canvas.restoreState()
 
     doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
     print(f"✅ PDF generado: PDFs/output/{nombre_archivo}")
     return nombre_archivo
-
-
-
-def _cel_header():
-    return ParagraphStyle(
-        "hdr", fontSize=8, fontName="Helvetica-Bold",
-        textColor=BLANCO, alignment=TA_CENTER, leading=10
-    )
 
 
 # ─────────────────────────────────────────────────────────────
