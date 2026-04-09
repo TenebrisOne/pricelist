@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "WebFetch(www.odoo.com)"
+      "WebFetch(www.odoo.com)",
+      "Bash(python *)"
     ]
   },
   "$version": 3
