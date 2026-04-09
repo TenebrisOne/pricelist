@@ -36,11 +36,13 @@ CONFIG = {
     # Nombres exactos de las listas de precios en Odoo
     "listas": ["Lista Business", "Lista Reseller"],
 
-    # Ciudad y moneda por defecto (la moneda se obtiene de Odoo, esto es fallback)
-    "ciudad": "BOGOTA",
-    "moneda": "COP",
+    # Ciudad por defecto (se obtiene de Odoo, esto es fallback)
+    # "ciudad": "BOGOTA",
 
-    # Vigencia (texto compacto para el banner)
+    # Vigencia (texto que aparece en el banner del PDF)
+    # ⚠️  ESTO ES DIFERENTE al filtro de fecha:
+    #   - vigencia: Texto informativo que se muestra en el PDF
+    #   - fecha_inicio_max/fecha_fin_min: Filtros para incluir/excluir productos
     "vigencia": "VIGENCIA: 01/04/2026 — 18/04/2026 | IVA INCLUIDO | SUJETO A DISPONIBILIDAD",
 
     # Footer
@@ -48,6 +50,36 @@ CONFIG = {
     "telefono": "304 6285091",
     "web": "reseller.wondertech.com.co",
     "direccion": "Cl. 99 #11B 66 OF 402 Chico norte - Bogotá",
+
+    # ═══════════════════════════════════════════════════════════
+    # 🔧  FILTROS DE PRODUCTOS
+    # ═══════════════════════════════════════════════════════════
+
+    # ⭐  FILTRO PRINCIPAL: Favoritos (POR DEFECTO: True = excluir favoritos)
+    # Si es True, solo se incluyen productos donde is_favorite = False
+    # Los productos marcados como favoritos (estrella) NO aparecen en el PDF
+    "excluir_favoritos": True,      # ⭐ Por defecto: NO incluir productos favoritos
+
+    # 📅  Filtro por fecha (None = sin filtro, o formato "YYYY-MM-DD")
+    # Solo incluye productos con fecha_inicio <= fecha_actual <= fecha_fin
+    # Ej: "fecha_inicio_max": "2026-04-18" (productos que inician antes de esta fecha)
+    "fecha_inicio_max": None,       # Productos que inician antes de esta fecha
+    "fecha_fin_min": None,          # Productos que terminan después de esta fecha
+
+    # 📂  Filtro por categorías (None o lista vacía = todas las categorías)
+    # Ej: ["ACCESORIOS", "AUDIO", "CABLES"]
+    "categorias_incluidas": None,
+
+    # 🏷️  Filtro por marcas (None o lista vacía = todas las marcas)
+    # Ej: ["HP", "LENOVO", "DELL", "ASUS"]
+    "marcas_incluidas": None,
+
+    # 💰  Filtro por rango de precios (None = sin límite)
+    "precio_min": None,             # Precio mínimo (None = sin mínimo)
+    "precio_max": None,             # Precio máximo (None = sin máximo)
+
+    # 🔢  Límite máximo de productos (None = todos)
+    "max_productos": None,          # Número máximo de productos por lista
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -161,8 +193,8 @@ def buscar_lista(models, uid, cfg, nombre_lista):
     lista_id = lista["id"]
 
     # Obtener información de la moneda desde currency_id
-    moneda = cfg["moneda"]  # valor por defecto
-    simbolo_moneda = cfg["moneda"]  # valor por defecto
+    moneda = cfg.get("moneda", "COP")  # valor por defecto
+    simbolo_moneda = cfg.get("simbolo_moneda", "$")  # valor por defecto
     if lista.get("currency_id"):
         currency_id = lista["currency_id"][0]
         currency_name = lista["currency_id"][1] if len(lista["currency_id"]) > 1 else ""
@@ -206,6 +238,7 @@ def buscar_lista(models, uid, cfg, nombre_lista):
             sku_interno = prod_info[0].get("default_code") or ""
             categ_id = prod_info[0].get("categ_id")
             tmpl_id = prod_info[0].get("product_tmpl_id", [None])[0] if prod_info[0].get("product_tmpl_id") else None
+            es_favorito = False  # Se obtiene del template más abajo
             tipo_producto = ""  # Se obtiene más abajo del template
         elif item.get("product_tmpl_id"):
             tmpl_id = item["product_tmpl_id"][0]
@@ -213,39 +246,86 @@ def buscar_lista(models, uid, cfg, nombre_lista):
                 db, uid, pw,
                 "product.template", "read",
                 [[tmpl_id]],
-                {"fields": ["name", "default_code", "categ_id", "x_studio_marca", "x_studio_selection_field_6ob_1j1gf5dtp"]}
+                {"fields": ["name", "default_code", "categ_id", "x_studio_marca", "x_studio_selection_field_6ob_1j1gf5dtp", "is_favorite"]}
             )
             nombre_completo = tmpl_info[0]["name"] if tmpl_info else ""
             sku_interno = tmpl_info[0].get("default_code") or ""
             categ_id = tmpl_info[0].get("categ_id")
             marca = tmpl_info[0].get("x_studio_marca") or ""
             tipo_producto = tmpl_info[0].get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
+            es_favorito = tmpl_info[0].get("is_favorite", False)
         else:
             continue
 
-        # Obtener tipo de producto desde x_studio_selection_field_6ob_1j1gf5dtp
+        # Obtener tipo de producto y favorito desde el template
         if not tipo_producto and tmpl_id:
             tmpl_info = models.execute_kw(
                 db, uid, pw,
                 "product.template", "read",
                 [[tmpl_id]],
-                {"fields": ["x_studio_selection_field_6ob_1j1gf5dtp"]}
+                {"fields": ["x_studio_selection_field_6ob_1j1gf5dtp", "is_favorite"]}
             )
-            if tmpl_info and tmpl_info[0].get("x_studio_selection_field_6ob_1j1gf5dtp"):
-                tipo_producto = tmpl_info[0]["x_studio_selection_field_6ob_1j1gf5dtp"]
+            if tmpl_info:
+                if not tipo_producto:
+                    tipo_producto = tmpl_info[0].get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
+                if not es_favorito:
+                    es_favorito = tmpl_info[0].get("is_favorite", False)
 
         marca, sku, descripcion = parsear_producto(nombre_completo, sku_interno, marca)
+        categoria_final = tipo_producto if tipo_producto else "SIN CATEGORÍA"
+        precio = item.get("fixed_price") or item.get("price") or 0
+        fecha_inicio = item.get("date_start") or ""
+        fecha_fin = item.get("date_end") or ""
 
+        # ═══════════════════════════════════════════════════════
+        # 🔧  APLICACIÓN DE FILTROS
+        # ═══════════════════════════════════════════════════════
+        
+        # ⭐  FILTRO PRINCIPAL: Excluir favoritos (estrella marcada)
+        if cfg.get("excluir_favoritos") and es_favorito:
+            continue  # Producto es favorito, NO incluirlo en el PDF
+
+        # 📅  Filtro por fecha
+        if cfg.get("fecha_inicio_max") and fecha_inicio:
+            if fecha_inicio > cfg["fecha_inicio_max"]:
+                continue  # Producto inicia después de la fecha límite
+        if cfg.get("fecha_fin_min") and fecha_fin:
+            if fecha_fin < cfg["fecha_fin_min"]:
+                continue  # Producto termina antes de la fecha mínima
+        
+        # 📂  Filtro por categorías
+        if cfg.get("categorias_incluidas"):
+            if categoria_final.upper() not in [c.upper() for c in cfg["categorias_incluidas"]]:
+                continue
+        
+        # 🏷️  Filtro por marcas
+        if cfg.get("marcas_incluidas"):
+            if marca.upper() not in [m.upper() for m in cfg["marcas_incluidas"]]:
+                continue
+        
+        # 💰  Filtro por rango de precios
+        if cfg.get("precio_min") is not None:
+            if precio < cfg["precio_min"]:
+                continue
+        if cfg.get("precio_max") is not None:
+            if precio > cfg["precio_max"]:
+                continue
+
+        # 📦  Agregar producto filtrado
         productos.append({
             "marca": marca,
             "sku": sku,
             "descripcion": descripcion,
-            "categoria": tipo_producto if tipo_producto else "SIN CATEGORÍA",
-            "precio": item.get("fixed_price") or item.get("price") or 0,
+            "categoria": categoria_final,
+            "precio": precio,
             "cantidad_min": item.get("min_quantity") or 0,
-            "fecha_inicio": item.get("date_start") or "",
-            "fecha_fin": item.get("date_end") or "",
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin,
         })
+
+        # 🔢  Verificar límite máximo de productos
+        if cfg.get("max_productos") and len(productos) >= cfg["max_productos"]:
+            break
 
     print(f"✅ '{nombre_lista}': {len(productos)} productos cargados. Moneda: {moneda} ({simbolo_moneda})")
     return lista, productos, {"name": moneda, "symbol": simbolo_moneda}
@@ -518,6 +598,37 @@ def main():
     print(f"🌐 Ambiente seleccionado: {cfg['ambiente']}")
     print(f"🔗 JSON-RPC: {cfg['jsonrpc_url']}")
     print(f"🗄️  Base de datos: {cfg['db']}")
+
+    # Mostrar filtros activos
+    print("\n🔧  Filtros configurados:")
+    filtros_activos = []
+    
+    # ⭐ Filtro principal: Favoritos
+    if cfg.get("excluir_favoritos"):
+        filtros_activos.append("⭐ Excluir favoritos (estrella)")
+    else:
+        filtros_activos.append("⭐ Incluir todos (favoritos + no favoritos)")
+    
+    if cfg.get("fecha_inicio_max"):
+        filtros_activos.append(f"Fecha inicio máx: {cfg['fecha_inicio_max']}")
+    if cfg.get("fecha_fin_min"):
+        filtros_activos.append(f"Fecha fin mín: {cfg['fecha_fin_min']}")
+    if cfg.get("categorias_incluidas"):
+        filtros_activos.append(f"Categorías: {', '.join(cfg['categorias_incluidas'])}")
+    if cfg.get("marcas_incluidas"):
+        filtros_activos.append(f"Marcas: {', '.join(cfg['marcas_incluidas'])}")
+    if cfg.get("precio_min") is not None:
+        filtros_activos.append(f"Precio mín: ${cfg['precio_min']:,.0f}")
+    if cfg.get("precio_max") is not None:
+        filtros_activos.append(f"Precio máx: ${cfg['precio_max']:,.0f}")
+    if cfg.get("max_productos"):
+        filtros_activos.append(f"Máx productos: {cfg['max_productos']}")
+    
+    if filtros_activos:
+        for f in filtros_activos:
+            print(f"   ✓ {f}")
+    else:
+        print("   ⚠️  Sin filtros (todos los productos)")
 
     try:
         models, uid = conectar_odoo(cfg["url"], cfg["db"], cfg["uid"], cfg["password"])
