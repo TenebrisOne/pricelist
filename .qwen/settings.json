@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(www.odoo.com)"
+    ]
+  },
+  "$version": 3
+}
