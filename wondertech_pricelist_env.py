@@ -24,7 +24,14 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import (
+    HRFlowable,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 # Cargar variables del archivo .env
 load_dotenv()
@@ -35,57 +42,47 @@ load_dotenv()
 CONFIG = {
     # Nombres exactos de las listas de precios en Odoo
     "listas": ["Lista Business", "Lista Reseller"],
-
     # Ciudad por defecto (se obtiene de Odoo, esto es fallback)
     # "ciudad": "BOGOTA",
-
     # Vigencia (texto que aparece en el banner del PDF)
     # ⚠️  ESTO ES DIFERENTE al filtro de fecha:
     #   - vigencia: Texto informativo que se muestra en el PDF
     #   - fecha_inicio_max/fecha_fin_min: Filtros para incluir/excluir productos
     "vigencia": "VIGENCIA: 01/04/2026 — 18/04/2026 | IVA INCLUIDO | SUJETO A DISPONIBILIDAD",
-
     # Footer
     "empresa": "WONDERTECH",
     "telefono": "304 6285091",
     "web": "reseller.wondertech.com.co",
     "direccion": "Cl. 99 #11B 66 OF 402 Chico norte - Bogotá",
-
     # ═══════════════════════════════════════════════════════════
     # 🔧  FILTROS DE PRODUCTOS
     # ═══════════════════════════════════════════════════════════
-
     # ⭐  FILTRO PRINCIPAL: Favoritos (POR DEFECTO: True = excluir favoritos)
     # Si es True, solo se incluyen productos donde is_favorite = False
     # Los productos marcados como favoritos (estrella) NO aparecen en el PDF
-    "excluir_favoritos": True,      # ⭐ Por defecto: NO incluir productos favoritos
-
+    "excluir_favoritos": True,  # ⭐ Por defecto: NO incluir productos favoritos
     # 📅  Filtro por fecha (None = sin filtro, o formato "YYYY-MM-DD")
     # Solo incluye productos con fecha_inicio <= fecha_actual <= fecha_fin
     # Ej: "fecha_inicio_max": "2026-04-18" (productos que inician antes de esta fecha)
-    "fecha_inicio_max": None,       # Productos que inician antes de esta fecha
-    "fecha_fin_min": None,          # Productos que terminan después de esta fecha
-
+    "fecha_inicio_max": None,  # Productos que inician antes de esta fecha
+    "fecha_fin_min": None,  # Productos que terminan después de esta fecha
     # 📂  Filtro por categorías (None o lista vacía = todas las categorías)
     # Ej: ["ACCESORIOS", "AUDIO", "CABLES"]
     "categorias_incluidas": None,
-
     # 🏷️  Filtro por marcas (None o lista vacía = todas las marcas)
     # Ej: ["HP", "LENOVO", "DELL", "ASUS"]
     "marcas_incluidas": None,
-
     # 💰  Filtro por rango de precios (None = sin límite)
-    "precio_min": None,             # Precio mínimo (None = sin mínimo)
-    "precio_max": None,             # Precio máximo (None = sin máximo)
-
+    "precio_min": None,  # Precio mínimo (None = sin mínimo)
+    "precio_max": None,  # Precio máximo (None = sin máximo)
     # 🔢  Límite máximo de productos (None = todos)
-    "max_productos": None,          # Número máximo de productos por lista
+    "max_productos": None,  # Número máximo de productos por lista
 }
 
 # ─────────────────────────────────────────────────────────────
 #  🎨  COLORES CORPORATIVOS WONDERTECH
 # ─────────────────────────────────────────────────────────────
-ROJO_W = colors.HexColor("#C0392B")
+ROJO_W = colors.HexColor("#DE1B60")  # Magenta moderno Wondertech
 GRIS_OSC = colors.HexColor("#2C3E50")
 GRIS_CLR = colors.HexColor("#ECF0F1")
 BLANCO = colors.white
@@ -127,9 +124,7 @@ def cargar_credenciales_desde_env():
         faltantes.append(f"{prefijo}_ODOO_PASSWORD")
 
     if faltantes:
-        raise Exception(
-            "Faltan variables en el .env: " + ", ".join(faltantes)
-        )
+        raise Exception("Faltan variables en el .env: " + ", ".join(faltantes))
 
     try:
         uid = int(uid_raw)
@@ -153,7 +148,9 @@ def cargar_credenciales_desde_env():
 def conectar_odoo(url, db, uid, password):
     """Valida acceso y retorna el proxy de modelos de Odoo."""
     if not url:
-        raise Exception("❌ No se pudo derivar la URL base de Odoo desde *_ODOO_JSONRPC.")
+        raise Exception(
+            "❌ No se pudo derivar la URL base de Odoo desde *_ODOO_JSONRPC."
+        )
 
     common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common", allow_none=True)
     common.version()  # valida conectividad básica
@@ -162,14 +159,13 @@ def conectar_odoo(url, db, uid, password):
 
     # Validación simple usando el UID del .env
     usuario = models.execute_kw(
-        db, uid, password,
-        "res.users", "read",
-        [[uid]],
-        {"fields": ["name", "login"]}
+        db, uid, password, "res.users", "read", [[uid]], {"fields": ["name", "login"]}
     )
 
     if not usuario:
-        raise Exception("❌ No fue posible validar el acceso con el UID y API Key del .env.")
+        raise Exception(
+            "❌ No fue posible validar el acceso con el UID y API Key del .env."
+        )
 
     print(f"✅ Conectado a Odoo como UID={uid} ({usuario[0].get('login', '')})")
     return models, uid
@@ -180,10 +176,13 @@ def buscar_lista(models, uid, cfg, nombre_lista):
     db, pw = cfg["db"], cfg["password"]
 
     listas = models.execute_kw(
-        db, uid, pw,
-        "product.pricelist", "search_read",
+        db,
+        uid,
+        pw,
+        "product.pricelist",
+        "search_read",
         [[["name", "=", nombre_lista]]],
-        {"fields": ["id", "name", "currency_id"], "limit": 1}
+        {"fields": ["id", "name", "currency_id"], "limit": 1},
     )
     if not listas:
         print(f"⚠️  Lista '{nombre_lista}' no encontrada en Odoo.")
@@ -201,27 +200,38 @@ def buscar_lista(models, uid, cfg, nombre_lista):
 
         # Leer detalles de la moneda desde res.currency
         currency_info = models.execute_kw(
-            db, uid, pw,
-            "res.currency", "read",
+            db,
+            uid,
+            pw,
+            "res.currency",
+            "read",
             [[currency_id]],
-            {"fields": ["name", "symbol"]}
+            {"fields": ["name", "symbol"]},
         )
         if currency_info:
             moneda = currency_info[0].get("name", currency_name)
             simbolo_moneda = currency_info[0].get("symbol", currency_name)
 
     items_raw = models.execute_kw(
-        db, uid, pw,
-        "product.pricelist.item", "search_read",
+        db,
+        uid,
+        pw,
+        "product.pricelist.item",
+        "search_read",
         [[["pricelist_id", "=", lista_id]]],
         {
             "fields": [
-                "product_tmpl_id", "product_id",
-                "price", "fixed_price", "min_quantity",
-                "date_start", "date_end", "applied_on"
+                "product_tmpl_id",
+                "product_id",
+                "price",
+                "fixed_price",
+                "min_quantity",
+                "date_start",
+                "date_end",
+                "applied_on",
             ],
-            "limit": 2000
-        }
+            "limit": 2000,
+        },
     )
 
     productos = []
@@ -229,30 +239,51 @@ def buscar_lista(models, uid, cfg, nombre_lista):
         if item.get("product_id"):
             prod_id = item["product_id"][0]
             prod_info = models.execute_kw(
-                db, uid, pw,
-                "product.product", "read",
+                db,
+                uid,
+                pw,
+                "product.product",
+                "read",
                 [[prod_id]],
-                {"fields": ["name", "default_code", "categ_id", "product_tmpl_id"]}
+                {"fields": ["name", "default_code", "categ_id", "product_tmpl_id"]},
             )
             nombre_completo = prod_info[0]["name"] if prod_info else ""
             sku_interno = prod_info[0].get("default_code") or ""
             categ_id = prod_info[0].get("categ_id")
-            tmpl_id = prod_info[0].get("product_tmpl_id", [None])[0] if prod_info[0].get("product_tmpl_id") else None
+            tmpl_id = (
+                prod_info[0].get("product_tmpl_id", [None])[0]
+                if prod_info[0].get("product_tmpl_id")
+                else None
+            )
             es_favorito = False  # Se obtiene del template más abajo
             tipo_producto = ""  # Se obtiene más abajo del template
         elif item.get("product_tmpl_id"):
             tmpl_id = item["product_tmpl_id"][0]
             tmpl_info = models.execute_kw(
-                db, uid, pw,
-                "product.template", "read",
+                db,
+                uid,
+                pw,
+                "product.template",
+                "read",
                 [[tmpl_id]],
-                {"fields": ["name", "default_code", "categ_id", "x_studio_marca", "x_studio_selection_field_6ob_1j1gf5dtp", "is_favorite"]}
+                {
+                    "fields": [
+                        "name",
+                        "default_code",
+                        "categ_id",
+                        "x_studio_marca",
+                        "x_studio_selection_field_6ob_1j1gf5dtp",
+                        "is_favorite",
+                    ]
+                },
             )
             nombre_completo = tmpl_info[0]["name"] if tmpl_info else ""
             sku_interno = tmpl_info[0].get("default_code") or ""
             categ_id = tmpl_info[0].get("categ_id")
             marca = tmpl_info[0].get("x_studio_marca") or ""
-            tipo_producto = tmpl_info[0].get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
+            tipo_producto = (
+                tmpl_info[0].get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
+            )
             es_favorito = tmpl_info[0].get("is_favorite", False)
         else:
             continue
@@ -260,14 +291,19 @@ def buscar_lista(models, uid, cfg, nombre_lista):
         # Obtener tipo de producto y favorito desde el template
         if not tipo_producto and tmpl_id:
             tmpl_info = models.execute_kw(
-                db, uid, pw,
-                "product.template", "read",
+                db,
+                uid,
+                pw,
+                "product.template",
+                "read",
                 [[tmpl_id]],
-                {"fields": ["x_studio_selection_field_6ob_1j1gf5dtp", "is_favorite"]}
+                {"fields": ["x_studio_selection_field_6ob_1j1gf5dtp", "is_favorite"]},
             )
             if tmpl_info:
                 if not tipo_producto:
-                    tipo_producto = tmpl_info[0].get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
+                    tipo_producto = (
+                        tmpl_info[0].get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
+                    )
                 if not es_favorito:
                     es_favorito = tmpl_info[0].get("is_favorite", False)
 
@@ -280,7 +316,7 @@ def buscar_lista(models, uid, cfg, nombre_lista):
         # ═══════════════════════════════════════════════════════
         # 🔧  APLICACIÓN DE FILTROS
         # ═══════════════════════════════════════════════════════
-        
+
         # ⭐  FILTRO PRINCIPAL: Excluir favoritos (estrella marcada)
         if cfg.get("excluir_favoritos") and es_favorito:
             continue  # Producto es favorito, NO incluirlo en el PDF
@@ -292,17 +328,19 @@ def buscar_lista(models, uid, cfg, nombre_lista):
         if cfg.get("fecha_fin_min") and fecha_fin:
             if fecha_fin < cfg["fecha_fin_min"]:
                 continue  # Producto termina antes de la fecha mínima
-        
+
         # 📂  Filtro por categorías
         if cfg.get("categorias_incluidas"):
-            if categoria_final.upper() not in [c.upper() for c in cfg["categorias_incluidas"]]:
+            if categoria_final.upper() not in [
+                c.upper() for c in cfg["categorias_incluidas"]
+            ]:
                 continue
-        
+
         # 🏷️  Filtro por marcas
         if cfg.get("marcas_incluidas"):
             if marca.upper() not in [m.upper() for m in cfg["marcas_incluidas"]]:
                 continue
-        
+
         # 💰  Filtro por rango de precios
         if cfg.get("precio_min") is not None:
             if precio < cfg["precio_min"]:
@@ -312,22 +350,26 @@ def buscar_lista(models, uid, cfg, nombre_lista):
                 continue
 
         # 📦  Agregar producto filtrado
-        productos.append({
-            "marca": marca,
-            "sku": sku,
-            "descripcion": descripcion,
-            "categoria": categoria_final,
-            "precio": precio,
-            "cantidad_min": item.get("min_quantity") or 0,
-            "fecha_inicio": fecha_inicio,
-            "fecha_fin": fecha_fin,
-        })
+        productos.append(
+            {
+                "marca": marca,
+                "sku": sku,
+                "descripcion": descripcion,
+                "categoria": categoria_final,
+                "precio": precio,
+                "cantidad_min": item.get("min_quantity") or 0,
+                "fecha_inicio": fecha_inicio,
+                "fecha_fin": fecha_fin,
+            }
+        )
 
         # 🔢  Verificar límite máximo de productos
         if cfg.get("max_productos") and len(productos) >= cfg["max_productos"]:
             break
 
-    print(f"✅ '{nombre_lista}': {len(productos)} productos cargados. Moneda: {moneda} ({simbolo_moneda})")
+    print(
+        f"✅ '{nombre_lista}': {len(productos)} productos cargados. Moneda: {moneda} ({simbolo_moneda})"
+    )
     return lista, productos, {"name": moneda, "symbol": simbolo_moneda}
 
 
@@ -335,9 +377,22 @@ def buscar_lista(models, uid, cfg, nombre_lista):
 #  🔍  PARSER DE NOMBRES DE PRODUCTO
 # ─────────────────────────────────────────────────────────────
 MARCAS_CONOCIDAS = [
-    "HP/POLY", "HP", "LENOVO", "DELL", "ASUS", "APPLE", "SAMSUNG",
-    "ADATA", "XUE", "GENERICO", "X-KIM", "KIOXIA", "SKHYNIX",
-    "GENIUS", "TELTONIKA", "LENOVO-REFURBISHED"
+    "HP/POLY",
+    "HP",
+    "LENOVO",
+    "DELL",
+    "ASUS",
+    "APPLE",
+    "SAMSUNG",
+    "ADATA",
+    "XUE",
+    "GENERICO",
+    "X-KIM",
+    "KIOXIA",
+    "SKHYNIX",
+    "GENIUS",
+    "TELTONIKA",
+    "LENOVO-REFURBISHED",
 ]
 
 
@@ -351,11 +406,11 @@ def parsear_producto(nombre, sku_campo="", marca_odoo=""):
     if match_sku:
         if not sku:
             sku = match_sku.group(1).strip()
-        descripcion = nombre[match_sku.end():]
+        descripcion = nombre[match_sku.end() :]
 
     # Remover SKU del inicio de la descripción si está presente
     if sku and descripcion.upper().startswith(sku.upper()):
-        descripcion = descripcion[len(sku):].strip()
+        descripcion = descripcion[len(sku) :].strip()
         if descripcion.startswith(("-", ",", ":")):
             descripcion = descripcion[1:].strip()
 
@@ -370,7 +425,7 @@ def parsear_producto(nombre, sku_campo="", marca_odoo=""):
         for m in sorted(MARCAS_CONOCIDAS, key=len, reverse=True):
             if desc_upper.startswith(m.upper()):
                 marca = m
-                descripcion = descripcion[len(m):].strip()
+                descripcion = descripcion[len(m) :].strip()
                 if descripcion.startswith(("-", ":")):
                     descripcion = descripcion[1:].strip()
                 break
@@ -384,7 +439,6 @@ def parsear_producto(nombre, sku_campo="", marca_odoo=""):
     return marca.upper(), sku, descripcion.strip()
 
 
-
 def formatear_precio(precio, simbolo="$"):
     if not precio:
         return f"{simbolo} 0"
@@ -396,7 +450,9 @@ def formatear_precio(precio, simbolo="$"):
 # ─────────────────────────────────────────────────────────────
 def generar_pdf(nombre_lista, productos, cfg):
     # Crear directorio de salida si no existe
-    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "PDFs", "output")
+    output_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "PDFs", "output"
+    )
     os.makedirs(output_dir, exist_ok=True)
 
     nombre_archivo = f"Lista_{nombre_lista.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
@@ -407,103 +463,45 @@ def generar_pdf(nombre_lista, productos, cfg):
         pagesize=landscape(A4),
         leftMargin=1.0 * cm,
         rightMargin=1.0 * cm,
-        topMargin=5.5 * cm,
-        bottomMargin=5.0 * cm,
+        topMargin=3.5 * cm,
+        bottomMargin=3.0 * cm,
         title=f"Lista de Precios - {nombre_lista}",
         author=cfg["empresa"],
     )
 
     story = []
 
-    # ── HEADER PROFESIONAL CON DISEÑO IMPACTANTE ──
-    def draw_header(canvas, doc):
-        canvas.saveState()
-        
-        # Obtener dimensiones de la página
-        page_width = doc.pagesize[0]
-        page_height = doc.pagesize[1]
-        
-        # Header background
-        canvas.setFillColor(colors.HexColor("#F8F9FA"))
-        canvas.rect(0, page_height - 3.3 * cm, page_width, 3.3 * cm, fill=1, stroke=0)
-        
-        # Red accent line at very top
-        canvas.setFillColor(ROJO_W)
-        canvas.rect(0, page_height - 0.12 * cm, page_width, 0.12 * cm, fill=1, stroke=0)
-        
-        # ═══════════════════════════════════════════
-        # ROW 1: "LISTA DE PRECIOS" title (top)
-        # ═══════════════════════════════════════════
-        canvas.setFont("Helvetica-Bold", 20)
-        canvas.setFillColor(GRIS_OSC)
-        canvas.drawCentredString(page_width / 2, page_height - 1.2 * cm, "LISTA DE PRECIOS")
-        
-        # Divider line
-        canvas.setStrokeColor(ROJO_W)
-        canvas.setLineWidth(0.5)
-        canvas.line(2 * cm, page_height - 1.5 * cm, page_width - 2 * cm, page_height - 1.5 * cm)
-        
-        # ═══════════════════════════════════════════
-        # ROW 2: Logo centered (middle)
-        # ═══════════════════════════════════════════
-        logo_x = page_width / 2 - 1.2 * cm
-        logo_y = page_height - 2.2 * cm
-        
-        # Logo circle (red)
-        canvas.setFillColor(ROJO_W)
-        canvas.circle(logo_x + 0.3 * cm, logo_y, 0.28 * cm, fill=1)
-        
-        # "wondertech" text
-        canvas.setFont("Helvetica-Bold", 12)
-        canvas.setFillColor(GRIS_OSC)
-        canvas.drawString(logo_x + 0.7 * cm, logo_y + 0.05 * cm, "wondertech")
-        
-        # "Reseller" text (smaller, red)
-        canvas.setFont("Helvetica", 8)
-        canvas.setFillColor(ROJO_W)
-        canvas.drawString(logo_x + 2.05 * cm, logo_y - 0.3 * cm, "Reseller")
-        
-        # ═══════════════════════════════════════════
-        # ROW 3: Contact info (bottom) - well separated
-        # ═══════════════════════════════════════════
-        canvas.setFont("Helvetica", 7)
-        canvas.setFillColor(GRIS_OSC)
-        
-        # Phone (left)
-        canvas.drawString(2 * cm, page_height - 2.85 * cm, f"📞  {cfg['telefono']}")
-        
-        # Web (center-left)
-        canvas.drawString(page_width / 2 - 4 * cm, page_height - 2.90 * cm, f"🌐  {cfg['web']}")
-        
-        # Address (center-right)
-        canvas.drawString(page_width / 2 + 1 * cm, page_height - 2.90 * cm, f"📍  {cfg['direccion']}")
-        
-        # Country (right)
-        canvas.drawString(page_width - 3.8 * cm, page_height - 2.90 * cm, "🇨🇴  Colombia")
-        
-        canvas.restoreState()
-
     # ── BANNER DE VIGENCIA ──
     vigencia_style = ParagraphStyle(
-        "vigencia", fontSize=8, textColor=BLANCO,
-        fontName="Helvetica-Bold", alignment=TA_CENTER,
-        backColor=ROJO_W, borderPadding=5, spaceAfter=8,
-        borderColor=ROJO_W, borderWidth=1
+        "vigencia",
+        fontSize=8,
+        textColor=BLANCO,
+        fontName="Helvetica-Bold",
+        alignment=TA_CENTER,
+        backColor=ROJO_W,
+        borderPadding=5,
+        spaceAfter=8,
+        borderColor=ROJO_W,
+        borderWidth=1,
     )
     story.append(Paragraph(cfg["vigencia"], vigencia_style))
 
     # ── TABLA OPTIMIZADA ──
     col_widths = [
-        2.8 * cm,   # MARCA
-        3.2 * cm,   # SKU
+        2.8 * cm,  # MARCA
+        3.2 * cm,  # SKU
         15.5 * cm,  # DESCRIPCIÓN (expandido)
-        2.2 * cm,   # TIPO MONEDA
-        3.8 * cm,   # PRECIO
+        2.2 * cm,  # TIPO MONEDA
+        3.8 * cm,  # PRECIO
     ]
 
     header_style = ParagraphStyle(
-        "hdr", fontSize=7.5, fontName="Helvetica-Bold",
-        textColor=BLANCO, alignment=TA_CENTER, leading=9
+        "hdr",
+        fontSize=8,
+        fontName="Helvetica-Bold",
+        textColor=BLANCO,
+        alignment=TA_CENTER,
+        leading=10,
     )
     encabezado = [
         Paragraph("MARCA", header_style),
@@ -514,12 +512,28 @@ def generar_pdf(nombre_lista, productos, cfg):
     ]
 
     filas = [encabezado]
-    
+
     # Estilos de celda
-    cell_style = ParagraphStyle("cell", fontSize=7, fontName="Helvetica", leading=8.5)
-    cell_center = ParagraphStyle("cell_c", fontSize=7, fontName="Helvetica", leading=8.5, alignment=TA_CENTER)
-    price_style = ParagraphStyle("price", fontSize=7.5, fontName="Helvetica-Bold", leading=9, alignment=TA_RIGHT, textColor=GRIS_OSC)
-    cat_style = ParagraphStyle("cat", fontSize=7.5, fontName="Helvetica-Bold", leading=8, textColor=BLANCO, alignment=TA_CENTER)
+    cell_style = ParagraphStyle("cell", fontSize=7.5, fontName="Helvetica", leading=9.5)
+    cell_center = ParagraphStyle(
+        "cell_c", fontSize=7.5, fontName="Helvetica", leading=9.5, alignment=TA_CENTER
+    )
+    price_style = ParagraphStyle(
+        "price",
+        fontSize=8.5,
+        fontName="Helvetica-Bold",
+        leading=10,
+        alignment=TA_RIGHT,
+        textColor=GRIS_OSC,
+    )
+    cat_style = ParagraphStyle(
+        "cat",
+        fontSize=9,
+        fontName="Helvetica-Bold",
+        leading=11,
+        textColor=BLANCO,
+        alignment=TA_CENTER,
+    )
 
     # Agrupar productos por categoría
     productos_por_categoria = defaultdict(list)
@@ -541,8 +555,11 @@ def generar_pdf(nombre_lista, productos, cfg):
                 Paragraph(p["marca"], cell_center),
                 Paragraph(p["sku"], cell_center),
                 Paragraph(p["descripcion"], cell_style),
-                Paragraph(cfg["moneda"], cell_center),
-                Paragraph(formatear_precio(p["precio"], cfg.get("simbolo_moneda", "$")), price_style),
+                Paragraph(cfg.get("moneda", "COP"), cell_center),
+                Paragraph(
+                    formatear_precio(p["precio"], cfg.get("simbolo_moneda", "$")),
+                    price_style,
+                ),
             ]
             filas.append(fila)
 
@@ -554,22 +571,15 @@ def generar_pdf(nombre_lista, productos, cfg):
         # Header de tabla
         ("BACKGROUND", (0, 0), (-1, 0), GRIS_OSC),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, 0), 7.5),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, 0), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
-        ("LINEBELOW", (0, 0), (-1, 0), 2, ROJO_W),
-        
-        # Filas de datos
-        ("FONTSIZE", (0, 1), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, 0), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("FONTSIZE", (0, 1), (-1, -1), 7.5),
         ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 1), (-1, -1), 2.5),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 2.5),
-        ("LEFTPADDING", (0, 0), (-1, -1), 3),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-        
-        # Líneas de grid sutiles
+        ("LINEBELOW", (0, 0), (-1, 0), 2, ROJO_W),
         ("LINEABOVE", (0, 1), (-1, -1), 0.2, colors.HexColor("#D5DBDB")),
         ("LINEBELOW", (0, 1), (-1, -1), 0.2, colors.HexColor("#D5DBDB")),
     ]
@@ -577,119 +587,152 @@ def generar_pdf(nombre_lista, productos, cfg):
     # Aplicar estilos por fila
     row_idx = 1
     for categoria, productos_cat in sorted(productos_por_categoria.items()):
-        # Estilo para fila de categoría (fondo rojo, celdas combinadas)
+        # Estilo para fila de categoría
         style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), ROJO_W))
-        style_rules.append(("SPAN", (0, row_idx), (-1, row_idx)))  # Combinar todas las columnas
-        style_rules.append(("TOPPADDING", (0, row_idx), (-1, row_idx), 2))
-        style_rules.append(("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 2))
-        style_rules.append(("LINEABOVE", (0, row_idx), (-1, row_idx), 1.5, GRIS_OSC))
-        style_rules.append(("LINEBELOW", (0, row_idx), (-1, row_idx), 1.5, GRIS_OSC))
+        style_rules.append(("SPAN", (0, row_idx), (-1, row_idx)))
+        style_rules.append(("TOPPADDING", (0, row_idx), (-1, row_idx), 6))
+        style_rules.append(("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 6))
+        style_rules.append(("LINEABOVE", (0, row_idx), (-1, row_idx), 1, GRIS_OSC))
+        style_rules.append(("LINEBELOW", (0, row_idx), (-1, row_idx), 1, GRIS_OSC))
         row_idx += 1
 
-        # Estilo para productos (alternancia sutil)
         for i in range(len(productos_cat)):
-            # Alternancia más sutil: blanco y gris muy claro
-            bg_color = colors.HexColor("#F8F9FA") if (row_idx % 2) == 0 else BLANCO
+            bg_color = colors.HexColor("#F9F9F9") if (row_idx % 2) == 0 else BLANCO
             style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), bg_color))
+            style_rules.append(
+                (
+                    "LINEBELOW",
+                    (0, row_idx),
+                    (-1, row_idx),
+                    0.5,
+                    colors.HexColor("#E5E7E9"),
+                )
+            )
             row_idx += 1
 
     tabla.setStyle(TableStyle(style_rules))
     story.append(tabla)
 
-    # ── FOOTER IMPACTANTE CON LOGOS DE MARCAS ──
-    def draw_footer(canvas, doc):
+    # ── HEADER IMPACTANTE CON MARCAS (ESTILO IMAGEN 1) ──
+    def draw_header(canvas, doc):
         canvas.saveState()
-        
-        # Get page dimensions
-        page_width = doc.pagesize[0]
-        page_height = doc.pagesize[1]
-        
-        # Draw footer background (reduced height)
-        canvas.setFillColor(colors.HexColor("#F8F9FA"))
-        canvas.rect(0, 0, page_width, 3.0 * cm, fill=1, stroke=0)
-        
-        # Red accent bar at very bottom (thicker)
-        canvas.setFillColor(ROJO_W)
-        canvas.rect(0, 0, page_width, 0.18 * cm, fill=1, stroke=0)
-        
-        # Top separator line
-        canvas.setStrokeColor(ROJO_W)
-        canvas.setLineWidth(0.8)
-        canvas.line(0, 3.0 * cm, page_width, 3.0 * cm)
-        
-        # ═══════════════════════════════════════════
-        # UPPER SECTION: Logo + Info (compact)
-        # ═══════════════════════════════════════════
-        
-        # Logo (left side)
-        logo_x = 2 * cm
-        logo_y = 2.0 * cm
-        
-        # Logo circle
-        canvas.setFillColor(ROJO_W)
-        canvas.circle(logo_x + 0.35 * cm, logo_y, 0.35 * cm, fill=1)
-        
-        # "wondertech" text
-        canvas.setFont("Helvetica-Bold", 11)
-        canvas.setFillColor(GRIS_OSC)
-        canvas.drawString(logo_x + 0.85 * cm, logo_y + 0.08 * cm, "wondertech")
-        
-        # "Reseller" text
-        canvas.setFont("Helvetica", 7.5)
-        canvas.setFillColor(ROJO_W)
-        canvas.drawString(logo_x + 2.05 * cm, logo_y - 0.28 * cm, "Reseller")
-        
-        # Web (centered, compact)
-        canvas.setFont("Helvetica-Bold", 8)
-        canvas.setFillColor(GRIS_OSC)
-        canvas.drawCentredString(page_width / 2, logo_y + 0.12 * cm, f"🌐 {cfg['web']}")
-        
-        # Contact info (right side, compact)
-        canvas.setFont("Helvetica-Bold", 7.5)
-        canvas.setFillColor(GRIS_OSC)
-        contact_x = page_width - 7 * cm
-        
-        canvas.drawString(contact_x, logo_y + 0.5 * cm, "BOGOTÁ D.C")
-        canvas.setFont("Helvetica", 6.5)
-        canvas.drawString(contact_x, logo_y + 0.2 * cm, cfg["direccion"])
-        canvas.setFont("Helvetica-Bold", 7.5)
-        canvas.drawString(contact_x, logo_y - 0.1 * cm, f"PBX: {cfg['telefono']}")
-        
-        # ═══════════════════════════════════════════
-        # LOWER SECTION: Brand partners
-        # ═══════════════════════════════════════════
-        
+        width, height = doc.pagesize
+
+        # 1. Tira de marcas superior
         marcas = [
-            "ADATA", "alcatel", "Apple", "Acronis", "APC", "ASUS", 
-            "BESTLIFE", "BOSE", "crucial", "DELL EMC", "Genius", 
-            "Honeywell", "hp", "JBL", "kaspersky", "Lenovo", 
-            "MERCUSYS", "Microsoft", "motorola", "SAMSUNG", "SAT", 
-            "ViewSonic", "Western Digital", "mi", "HÜG"
+            "ADATA",
+            "alcatel",
+            "Apple",
+            "Acronis",
+            "APC",
+            "ASUS",
+            "BESTLIFE",
+            "BOSE",
+            "crucial",
+            "DELL EMC",
+            "Genius",
+            "Honeywell",
+            "hp",
+            "JBL",
+            "kaspersky",
+            "Lenovo",
+            "MERCUSYS",
+            "Microsoft",
+            "motorola",
+            "SAMSUNG",
+            "SAT",
+            "ViewSonic",
+            "Western Digital",
+            "mi",
+            "HÜG",
         ]
-        
-        # Separator line
-        canvas.setStrokeColor(colors.HexColor("#D5DBDB"))
-        canvas.setLineWidth(0.25)
-        canvas.line(2 * cm, 1.45 * cm, page_width - 2 * cm, 1.45 * cm)
-        
-        canvas.setFont("Helvetica", 5.5)
-        canvas.setFillColor(colors.HexColor("#7F8C8D"))
-        
-        # Distribute brands evenly
-        marca_width = (page_width - 4 * cm) / len(marcas)
-        for i, marca in enumerate(marcas):
-            x_pos = 2 * cm + i * marca_width
-            canvas.drawString(x_pos, 1.1 * cm, marca)
-        
-        # Pagination (bottom left, above red bar)
-        canvas.setFont("Helvetica", 6.5)
-        canvas.setFillColor(colors.HexColor("#95A5A6"))
-        canvas.drawString(doc.leftMargin, 0.45 * cm, cfg["empresa"])
-        canvas.drawRightString(page_width - doc.rightMargin, 0.45 * cm, f"Página {doc.page}")
-        
+        canvas.setFillColor(colors.HexColor("#ECF0F1"))
+        canvas.rect(0, height - 0.7 * cm, width, 0.7 * cm, fill=1, stroke=0)
+
+        canvas.setFont("Helvetica-Bold", 6.5)
+        canvas.setFillColor(GRIS_OSC)
+        marcas_str = "    ".join(marcas)
+        canvas.drawCentredString(width / 2.0, height - 0.5 * cm, marcas_str)
+
+        # Línea separadora sutil bajo las marcas
+        canvas.setStrokeColor(ROJO_W)
+        canvas.setLineWidth(1)
+        canvas.line(0, height - 0.7 * cm, width, height - 0.7 * cm)
+
+        # 2. wondertech Reseller Logo (Texto moderno)
+        logo_y = height - 1.8 * cm
+        logo_x = 1.0 * cm
+        str_wondertech = "wondertech "
+
+        canvas.setFillColor(GRIS_OSC)
+        canvas.setFont("Helvetica-Bold", 22)
+        canvas.drawString(logo_x, logo_y, str_wondertech)
+
+        w_width = canvas.stringWidth(str_wondertech, "Helvetica-Bold", 22)
+
+        canvas.setFillColor(ROJO_W)
+        canvas.setFont("Helvetica", 22)
+        canvas.drawString(logo_x + w_width, logo_y, "Reseller")
+
+        # 3. Datos Título y Contacto a la derecha
+        canvas.setFillColor(GRIS_OSC)
+        canvas.setFont("Helvetica-Bold", 16)
+        canvas.drawRightString(width - 1.0 * cm, height - 1.6 * cm, "LISTA DE PRECIOS")
+
+        canvas.setFont("Helvetica", 12)
+        canvas.setFillColor(ROJO_W)
+        canvas.drawRightString(
+            width - 1.0 * cm, height - 2.1 * cm, nombre_lista.upper()
+        )
+
+        # Línea decorativa fuerte
+        canvas.setStrokeColor(ROJO_W)
+        canvas.setLineWidth(2.5)
+        canvas.line(1.0 * cm, height - 2.4 * cm, width - 1.0 * cm, height - 2.4 * cm)
+
         canvas.restoreState()
 
-    # ── PAGINACIÓN (se maneja en draw_footer) ──
+    # ── FOOTER IMPACTANTE CON CURVA MAGENTA (ESTILO IMAGEN 2) ──
+    def draw_footer(canvas, doc):
+        canvas.saveState()
+        width, height = doc.pagesize
+
+        # 1. Curva Magenta en el fondo
+        canvas.setFillColor(ROJO_W)
+        p = canvas.beginPath()
+        p.moveTo(0, 0)
+        p.lineTo(0, 2.2 * cm)
+        # Bézier Curve smoothly sweeping across the footer
+        p.curveTo(width / 3.0, 3.4 * cm, 2.0 * width / 3.0, 3.4 * cm, width, 2.2 * cm)
+        p.lineTo(width, 0)
+        p.close()
+        canvas.drawPath(p, fill=1, stroke=0)
+
+        # 2. Textos sobre la curva en Blanco
+        canvas.setFillColor(BLANCO)
+
+        # Teléfono y Web
+        canvas.setFont("Helvetica-Bold", 12)
+        canvas.drawCentredString(
+            width / 2.0,
+            1.5 * cm,
+            f"✆ {cfg.get('telefono', '')}      🌐 {cfg.get('web', '')}",
+        )
+
+        # Dirección
+        canvas.setFont("Helvetica", 10)
+        canvas.drawCentredString(
+            width / 2.0, 0.8 * cm, f"📍 {cfg.get('direccion', '')}"
+        )
+
+        # Colombia y Paginación
+        canvas.setFont("Helvetica", 8)
+        canvas.drawString(1.0 * cm, 0.5 * cm, "🇨🇴  Colombia")
+        canvas.drawRightString(width - 1.0 * cm, 0.5 * cm, f"Página {doc.page}")
+
+        canvas.restoreState()
+
+    # ── PAGINACIÓN ──
     def on_first_page(canvas, doc):
         draw_header(canvas, doc)
         draw_footer(canvas, doc)
@@ -706,7 +749,15 @@ def generar_pdf(nombre_lista, productos, cfg):
 # ─────────────────────────────────────────────────────────────
 #  🚀  MAIN
 # ─────────────────────────────────────────────────────────────
+import sys
+
 def main():
+    if sys.stdout.encoding != 'utf-8':
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except AttributeError:
+            pass
+
     try:
         cred = cargar_credenciales_desde_env()
     except Exception as e:
@@ -725,13 +776,13 @@ def main():
     # Mostrar filtros activos
     print("\n🔧  Filtros configurados:")
     filtros_activos = []
-    
+
     # ⭐ Filtro principal: Favoritos
     if cfg.get("excluir_favoritos"):
         filtros_activos.append("⭐ Excluir favoritos (estrella)")
     else:
         filtros_activos.append("⭐ Incluir todos (favoritos + no favoritos)")
-    
+
     if cfg.get("fecha_inicio_max"):
         filtros_activos.append(f"Fecha inicio máx: {cfg['fecha_inicio_max']}")
     if cfg.get("fecha_fin_min"):
@@ -746,7 +797,7 @@ def main():
         filtros_activos.append(f"Precio máx: ${cfg['precio_max']:,.0f}")
     if cfg.get("max_productos"):
         filtros_activos.append(f"Máx productos: {cfg['max_productos']}")
-    
+
     if filtros_activos:
         for f in filtros_activos:
             print(f"   ✓ {f}")
@@ -768,13 +819,15 @@ def main():
     archivos = []
     for nombre_lista in cfg["listas"]:
         print(f"\n📋 Procesando: {nombre_lista}...")
-        lista_info, productos, moneda_info = buscar_lista(models, uid, cfg, nombre_lista)
+        lista_info, productos, moneda_info = buscar_lista(
+            models, uid, cfg, nombre_lista
+        )
 
         if productos:
             # Usar la moneda de Odoo si está disponible
             moneda_cfg = {
                 "moneda": moneda_info["name"],
-                "simbolo_moneda": moneda_info["symbol"]
+                "simbolo_moneda": moneda_info["symbol"],
             }
             archivo = generar_pdf(nombre_lista, productos, {**cfg, **moneda_cfg})
             archivos.append(archivo)
