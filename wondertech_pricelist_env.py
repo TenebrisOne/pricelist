@@ -461,7 +461,7 @@ def generar_pdf(nombre_lista, productos, cfg):
         # "Reseller" text (smaller, red)
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(ROJO_W)
-        canvas.drawString(logo_x + 2.3 * cm, logo_y - 0.3 * cm, "Reseller")
+        canvas.drawString(logo_x + 2.05 * cm, logo_y - 0.3 * cm, "Reseller")
         
         # ═══════════════════════════════════════════
         # ROW 3: Contact info (bottom) - well separated
@@ -637,7 +637,7 @@ def generar_pdf(nombre_lista, productos, cfg):
         # "Reseller" text
         canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(ROJO_W)
-        canvas.drawString(logo_x + 2.35 * cm, logo_y - 0.28 * cm, "Reseller")
+        canvas.drawString(logo_x + 2.05 * cm, logo_y - 0.28 * cm, "Reseller")
         
         # Web (centered, compact)
         canvas.setFont("Helvetica-Bold", 8)
