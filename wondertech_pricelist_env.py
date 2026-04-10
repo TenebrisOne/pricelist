@@ -392,7 +392,7 @@ def formatear_precio(precio, simbolo="$"):
 
 
 # ─────────────────────────────────────────────────────────────
-#  📄  GENERACIÓN DEL PDF - DISEÑO PROFESIONAL IMPACTANTE
+#  📄  GENERACIÓN DEL PDF - DISEÑO PROFESIONAL
 # ─────────────────────────────────────────────────────────────
 def generar_pdf(nombre_lista, productos, cfg):
     # Crear directorio de salida si no existe
@@ -407,8 +407,8 @@ def generar_pdf(nombre_lista, productos, cfg):
         pagesize=landscape(A4),
         leftMargin=1.0 * cm,
         rightMargin=1.0 * cm,
-        topMargin=3.5 * cm,  # Más espacio para el header
-        bottomMargin=4.0 * cm,  # Más espacio para el footer
+        topMargin=5.5 * cm,
+        bottomMargin=5.0 * cm,
         title=f"Lista de Precios - {nombre_lista}",
         author=cfg["empresa"],
     )
@@ -423,64 +423,63 @@ def generar_pdf(nombre_lista, productos, cfg):
         page_width = doc.pagesize[0]
         page_height = doc.pagesize[1]
         
-        # Dibujar fondo del header con color sólido
+        # Header background
         canvas.setFillColor(colors.HexColor("#F8F9FA"))
-        canvas.rect(0, page_height - 2.5 * cm, page_width, 2.5 * cm, fill=1, stroke=0)
+        canvas.rect(0, page_height - 3.3 * cm, page_width, 3.3 * cm, fill=1, stroke=0)
         
-        # Línea superior decorativa
+        # Red accent line at very top
         canvas.setFillColor(ROJO_W)
-        canvas.rect(0, page_height - 0.15 * cm, page_width, 0.15 * cm, fill=1, stroke=0)
+        canvas.rect(0, page_height - 0.12 * cm, page_width, 0.12 * cm, fill=1, stroke=0)
         
-        # Logo WonderTech - crear versión visual con formas
-        logo_x = page_width / 2 - 2.5 * cm
+        # ═══════════════════════════════════════════
+        # ROW 1: "LISTA DE PRECIOS" title (top)
+        # ═══════════════════════════════════════════
+        canvas.setFont("Helvetica-Bold", 20)
+        canvas.setFillColor(GRIS_OSC)
+        canvas.drawCentredString(page_width / 2, page_height - 1.2 * cm, "LISTA DE PRECIOS")
+        
+        # Divider line
+        canvas.setStrokeColor(ROJO_W)
+        canvas.setLineWidth(0.5)
+        canvas.line(2 * cm, page_height - 1.5 * cm, page_width - 2 * cm, page_height - 1.5 * cm)
+        
+        # ═══════════════════════════════════════════
+        # ROW 2: Logo centered (middle)
+        # ═══════════════════════════════════════════
+        logo_x = page_width / 2 - 1.2 * cm
         logo_y = page_height - 2.2 * cm
         
-        # Dibujar logo circular (representación del logo)
-        from reportlab.graphics.shapes import Drawing, Circle, String
-        from reportlab.graphics import renderPDF
-        
-        # Círculo del logo
-        logo_circle = Circle(logo_x + 0.6 * cm, logo_y + 0.6 * cm, 0.5 * cm)
-        logo_circle.fillColor = ROJO_W
-        logo_circle.strokeColor = ROJO_W
+        # Logo circle (red)
         canvas.setFillColor(ROJO_W)
-        canvas.circle(logo_x + 0.6 * cm, logo_y + 0.6 * cm, 0.5 * cm, fill=1)
+        canvas.circle(logo_x + 0.3 * cm, logo_y, 0.28 * cm, fill=1)
         
-        # Texto "wondertech"
-        canvas.setFont("Helvetica-Bold", 14)
+        # "wondertech" text
+        canvas.setFont("Helvetica-Bold", 12)
         canvas.setFillColor(GRIS_OSC)
-        canvas.drawString(logo_x + 1.3 * cm, logo_y + 0.7 * cm, "wondertech")
+        canvas.drawString(logo_x + 0.7 * cm, logo_y + 0.05 * cm, "wondertech")
         
-        # Texto "Reseller"
+        # "Reseller" text (smaller, red)
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(ROJO_W)
-        canvas.drawString(logo_x + 3.4 * cm, logo_y + 0.65 * cm, "Reseller")
+        canvas.drawString(logo_x + 2.3 * cm, logo_y - 0.3 * cm, "Reseller")
         
-        # Título LISTA DE PRECIOS centrado
-        canvas.setFont("Helvetica-Bold", 24)
-        canvas.setFillColor(GRIS_OSC)
-        canvas.drawCentredString(page_width / 2, page_height - 1.4 * cm, "LISTA DE PRECIOS")
-        
-        # Línea divisoria
-        canvas.setStrokeColor(ROJO_W)
-        canvas.setLineWidth(1)
-        canvas.line(1.5 * cm, page_height - 1.8 * cm, page_width - 1.5 * cm, page_height - 1.8 * cm)
-        
-        # Información de contacto con iconos (simulados con caracteres Unicode)
-        canvas.setFont("Helvetica", 8)
+        # ═══════════════════════════════════════════
+        # ROW 3: Contact info (bottom) - well separated
+        # ═══════════════════════════════════════════
+        canvas.setFont("Helvetica", 7)
         canvas.setFillColor(GRIS_OSC)
         
-        # Tel
-        canvas.drawString(1.5 * cm, page_height - 0.8 * cm, f"📞  {cfg['telefono']}")
+        # Phone (left)
+        canvas.drawString(2 * cm, page_height - 2.85 * cm, f"📞  {cfg['telefono']}")
         
-        # Web
-        canvas.drawString(6 * cm, page_height - 0.8 * cm, f"🌐  {cfg['web']}")
+        # Web (center-left)
+        canvas.drawString(page_width / 2 - 4 * cm, page_height - 2.85 * cm, f"🌐  {cfg['web']}")
         
-        # Dirección
-        canvas.drawString(13 * cm, page_height - 0.8 * cm, f"📍  {cfg['direccion']}")
+        # Address (center-right)
+        canvas.drawString(page_width / 2 + 1 * cm, page_height - 2.85 * cm, f"📍  {cfg['direccion']}")
         
-        # País
-        canvas.drawCentredString(page_width / 2, page_height - 0.5 * cm, "🗺️  Colombia")
+        # Country (right)
+        canvas.drawString(page_width - 3.8 * cm, page_height - 2.85 * cm, "🇨🇴  Colombia")
         
         canvas.restoreState()
 
@@ -520,7 +519,7 @@ def generar_pdf(nombre_lista, productos, cfg):
     cell_style = ParagraphStyle("cell", fontSize=7, fontName="Helvetica", leading=8.5)
     cell_center = ParagraphStyle("cell_c", fontSize=7, fontName="Helvetica", leading=8.5, alignment=TA_CENTER)
     price_style = ParagraphStyle("price", fontSize=7.5, fontName="Helvetica-Bold", leading=9, alignment=TA_RIGHT, textColor=GRIS_OSC)
-    cat_style = ParagraphStyle("cat", fontSize=8.5, fontName="Helvetica-Bold", leading=10, textColor=BLANCO, alignment=TA_CENTER)
+    cat_style = ParagraphStyle("cat", fontSize=7.5, fontName="Helvetica-Bold", leading=8, textColor=BLANCO, alignment=TA_CENTER)
 
     # Agrupar productos por categoría
     productos_por_categoria = defaultdict(list)
@@ -581,8 +580,8 @@ def generar_pdf(nombre_lista, productos, cfg):
         # Estilo para fila de categoría (fondo rojo, celdas combinadas)
         style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), ROJO_W))
         style_rules.append(("SPAN", (0, row_idx), (-1, row_idx)))  # Combinar todas las columnas
-        style_rules.append(("TOPPADDING", (0, row_idx), (-1, row_idx), 5))
-        style_rules.append(("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 5))
+        style_rules.append(("TOPPADDING", (0, row_idx), (-1, row_idx), 2))
+        style_rules.append(("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 2))
         style_rules.append(("LINEABOVE", (0, row_idx), (-1, row_idx), 1.5, GRIS_OSC))
         style_rules.append(("LINEBELOW", (0, row_idx), (-1, row_idx), 1.5, GRIS_OSC))
         row_idx += 1
@@ -601,63 +600,65 @@ def generar_pdf(nombre_lista, productos, cfg):
     def draw_footer(canvas, doc):
         canvas.saveState()
         
-        # Obtener dimensiones de la página
+        # Get page dimensions
         page_width = doc.pagesize[0]
         page_height = doc.pagesize[1]
         
-        # Dibujar fondo del footer con color sólido
+        # Draw footer background (reduced height)
         canvas.setFillColor(colors.HexColor("#F8F9FA"))
         canvas.rect(0, 0, page_width, 3.0 * cm, fill=1, stroke=0)
         
-        # Línea inferior decorativa
+        # Red accent bar at very bottom (thicker)
         canvas.setFillColor(ROJO_W)
-        canvas.rect(0, 0, page_width, 0.2 * cm, fill=1, stroke=0)
+        canvas.rect(0, 0, page_width, 0.18 * cm, fill=1, stroke=0)
         
-        # Línea superior del footer
+        # Top separator line
         canvas.setStrokeColor(ROJO_W)
-        canvas.setLineWidth(1.5)
+        canvas.setLineWidth(0.8)
         canvas.line(0, 3.0 * cm, page_width, 3.0 * cm)
         
-        # Logo WonderTech (lado izquierdo)
-        from reportlab.graphics.shapes import Circle
-        logo_x = 1.5 * cm
-        logo_y = 0.8 * cm
+        # ═══════════════════════════════════════════
+        # UPPER SECTION: Logo + Info (compact)
+        # ═══════════════════════════════════════════
         
-        # Círculo del logo
+        # Logo (left side)
+        logo_x = 2 * cm
+        logo_y = 2.0 * cm
+        
+        # Logo circle
         canvas.setFillColor(ROJO_W)
-        canvas.circle(logo_x + 0.5 * cm, logo_y + 0.5 * cm, 0.45 * cm, fill=1)
+        canvas.circle(logo_x + 0.35 * cm, logo_y, 0.35 * cm, fill=1)
         
-        # Texto "wondertech"
-        canvas.setFont("Helvetica-Bold", 12)
+        # "wondertech" text
+        canvas.setFont("Helvetica-Bold", 11)
         canvas.setFillColor(GRIS_OSC)
-        canvas.drawString(logo_x + 1.1 * cm, logo_y + 0.6 * cm, "wondertech")
+        canvas.drawString(logo_x + 0.85 * cm, logo_y + 0.08 * cm, "wondertech")
         
-        # Texto "Reseller"
-        canvas.setFont("Helvetica", 7)
-        canvas.setFillColor(ROJO_W)
-        canvas.drawString(logo_x + 2.9 * cm, logo_y + 0.55 * cm, "Reseller")
-        
-        # Icono de web + URL (centro)
-        canvas.setFont("Helvetica", 9)
-        canvas.setFillColor(GRIS_OSC)
-        web_x = page_width / 2 - 2.5 * cm
-        canvas.drawString(web_x, logo_y + 0.4 * cm, "🌐")
-        canvas.setFont("Helvetica-Bold", 9)
-        canvas.drawString(web_x + 0.6 * cm, logo_y + 0.4 * cm, cfg["web"])
-        canvas.setFont("Helvetica", 9)
-        canvas.drawCentredString(page_width / 2, logo_y - 0.1 * cm, cfg["web"])
-        
-        # Información de contacto (lado derecho)
-        canvas.setFont("Helvetica-Bold", 8)
-        canvas.setFillColor(GRIS_OSC)
-        contact_x = page_width - 8 * cm
-        canvas.drawString(contact_x, logo_y + 0.8 * cm, "BOGOTÁ D.C")
+        # "Reseller" text
         canvas.setFont("Helvetica", 7.5)
-        canvas.drawString(contact_x, logo_y + 0.5 * cm, cfg["direccion"])
-        canvas.setFont("Helvetica-Bold", 8)
-        canvas.drawString(contact_x, logo_y + 0.1 * cm, f"PBX:{cfg['telefono']}")
+        canvas.setFillColor(ROJO_W)
+        canvas.drawString(logo_x + 2.35 * cm, logo_y - 0.28 * cm, "Reseller")
         
-        # Marcas partners (fila horizontal en la parte inferior)
+        # Web (centered, compact)
+        canvas.setFont("Helvetica-Bold", 8)
+        canvas.setFillColor(GRIS_OSC)
+        canvas.drawCentredString(page_width / 2, logo_y + 0.12 * cm, f"🌐 {cfg['web']}")
+        
+        # Contact info (right side, compact)
+        canvas.setFont("Helvetica-Bold", 7.5)
+        canvas.setFillColor(GRIS_OSC)
+        contact_x = page_width - 7 * cm
+        
+        canvas.drawString(contact_x, logo_y + 0.5 * cm, "BOGOTÁ D.C")
+        canvas.setFont("Helvetica", 6.5)
+        canvas.drawString(contact_x, logo_y + 0.2 * cm, cfg["direccion"])
+        canvas.setFont("Helvetica-Bold", 7.5)
+        canvas.drawString(contact_x, logo_y - 0.1 * cm, f"PBX: {cfg['telefono']}")
+        
+        # ═══════════════════════════════════════════
+        # LOWER SECTION: Brand partners
+        # ═══════════════════════════════════════════
+        
         marcas = [
             "ADATA", "alcatel", "Apple", "Acronis", "APC", "ASUS", 
             "BESTLIFE", "BOSE", "crucial", "DELL EMC", "Genius", 
@@ -666,20 +667,25 @@ def generar_pdf(nombre_lista, productos, cfg):
             "ViewSonic", "Western Digital", "mi", "HÜG"
         ]
         
+        # Separator line
+        canvas.setStrokeColor(colors.HexColor("#D5DBDB"))
+        canvas.setLineWidth(0.25)
+        canvas.line(2 * cm, 1.45 * cm, page_width - 2 * cm, 1.45 * cm)
+        
         canvas.setFont("Helvetica", 5.5)
         canvas.setFillColor(colors.HexColor("#7F8C8D"))
         
-        # Calcular posiciones para distribuir las marcas uniformemente
-        marca_width = (page_width - 3 * cm) / len(marcas)
+        # Distribute brands evenly
+        marca_width = (page_width - 4 * cm) / len(marcas)
         for i, marca in enumerate(marcas):
-            x_pos = 1.5 * cm + i * marca_width
-            canvas.drawString(x_pos, logo_y - 0.8 * cm, marca)
+            x_pos = 2 * cm + i * marca_width
+            canvas.drawString(x_pos, 1.1 * cm, marca)
         
-        # Paginación
-        canvas.setFont("Helvetica", 7)
+        # Pagination (bottom left, above red bar)
+        canvas.setFont("Helvetica", 6.5)
         canvas.setFillColor(colors.HexColor("#95A5A6"))
-        canvas.drawString(doc.leftMargin, 2.6 * cm, cfg["empresa"])
-        canvas.drawRightString(page_width - doc.rightMargin, 2.6 * cm, f"Página {doc.page}")
+        canvas.drawString(doc.leftMargin, 0.45 * cm, cfg["empresa"])
+        canvas.drawRightString(page_width - doc.rightMargin, 0.45 * cm, f"Página {doc.page}")
         
         canvas.restoreState()
 
