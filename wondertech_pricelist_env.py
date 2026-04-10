@@ -467,14 +467,20 @@ def generar_pdf(nombre_lista, productos, cfg):
         pagesize=landscape(A4),
         leftMargin=1.0 * cm,
         rightMargin=1.0 * cm,
+<<<<<<< HEAD
         topMargin=7.2 * cm,    # Ajustado a proporción exacta de la imagen (6.93cm)
         bottomMargin=3.8 * cm, # Ajustado a proporción exacta del footer (3.6cm)
+=======
+        topMargin=3.5 * cm,
+        bottomMargin=3.0 * cm,
+>>>>>>> a6d5004 (Mejora pdf)
         title=f"Lista de Precios - {nombre_lista}",
         author=cfg["empresa"],
     )
 
     story = []
 
+<<<<<<< HEAD
     # ── TABLA OPTIMIZADA DE ACUERDO A LA REFERENCIA VISUAL ──
     col_widths = [
         3.0 * cm,   # MARCA
@@ -488,6 +494,39 @@ def generar_pdf(nombre_lista, productos, cfg):
     header_style = ParagraphStyle(
         "hdr", fontSize=7.5, fontName="Helvetica-Bold",
         textColor=BLANCO, alignment=TA_CENTER, leading=9.5
+=======
+    # ── BANNER DE VIGENCIA ──
+    vigencia_style = ParagraphStyle(
+        "vigencia",
+        fontSize=8,
+        textColor=BLANCO,
+        fontName="Helvetica-Bold",
+        alignment=TA_CENTER,
+        backColor=ROJO_W,
+        borderPadding=5,
+        spaceAfter=8,
+        borderColor=ROJO_W,
+        borderWidth=1,
+    )
+    story.append(Paragraph(cfg["vigencia"], vigencia_style))
+
+    # ── TABLA OPTIMIZADA ──
+    col_widths = [
+        2.8 * cm,  # MARCA
+        3.2 * cm,  # SKU
+        15.5 * cm,  # DESCRIPCIÓN (expandido)
+        2.2 * cm,  # TIPO MONEDA
+        3.8 * cm,  # PRECIO
+    ]
+
+    header_style = ParagraphStyle(
+        "hdr",
+        fontSize=8,
+        fontName="Helvetica-Bold",
+        textColor=BLANCO,
+        alignment=TA_CENTER,
+        leading=10,
+>>>>>>> a6d5004 (Mejora pdf)
     )
     
     vigencia_style = ParagraphStyle(
@@ -508,6 +547,7 @@ def generar_pdf(nombre_lista, productos, cfg):
         Paragraph("PRECIO IVA\nINCLUIDO SI\nAPLICA", header_style),
     ]
 
+<<<<<<< HEAD
     filas = [fila_vigencia, encabezado]
     
     # Estilos de celda
@@ -515,6 +555,31 @@ def generar_pdf(nombre_lista, productos, cfg):
     cell_center = ParagraphStyle("cell_c", fontSize=7.5, fontName="Helvetica", leading=9.5, alignment=TA_CENTER)
     price_style = ParagraphStyle("price", fontSize=8.5, fontName="Helvetica-Bold", leading=10, alignment=TA_RIGHT, textColor=GRIS_OSC)
     cat_style = ParagraphStyle("cat", fontSize=8, fontName="Helvetica-Bold", leading=10, textColor=BLANCO, alignment=TA_CENTER)
+=======
+    filas = [encabezado]
+
+    # Estilos de celda
+    cell_style = ParagraphStyle("cell", fontSize=7.5, fontName="Helvetica", leading=9.5)
+    cell_center = ParagraphStyle(
+        "cell_c", fontSize=7.5, fontName="Helvetica", leading=9.5, alignment=TA_CENTER
+    )
+    price_style = ParagraphStyle(
+        "price",
+        fontSize=8.5,
+        fontName="Helvetica-Bold",
+        leading=10,
+        alignment=TA_RIGHT,
+        textColor=GRIS_OSC,
+    )
+    cat_style = ParagraphStyle(
+        "cat",
+        fontSize=9,
+        fontName="Helvetica-Bold",
+        leading=11,
+        textColor=BLANCO,
+        alignment=TA_CENTER,
+    )
+>>>>>>> a6d5004 (Mejora pdf)
 
     # Agrupar productos por categoría
     productos_por_categoria = defaultdict(list)
@@ -536,9 +601,17 @@ def generar_pdf(nombre_lista, productos, cfg):
                 Paragraph(p["marca"], cell_center),
                 Paragraph(p["sku"], cell_center),
                 Paragraph(p["descripcion"], cell_style),
+<<<<<<< HEAD
                 Paragraph(c_ciudad, cell_center),
                 Paragraph(c_moneda, cell_center),
                 Paragraph(formatear_precio(p["precio"], cfg.get("simbolo_moneda", "$")), price_style),
+=======
+                Paragraph(cfg.get("moneda", "COP"), cell_center),
+                Paragraph(
+                    formatear_precio(p["precio"], cfg.get("simbolo_moneda", "$")),
+                    price_style,
+                ),
+>>>>>>> a6d5004 (Mejora pdf)
             ]
             filas.append(fila)
 
@@ -547,6 +620,7 @@ def generar_pdf(nombre_lista, productos, cfg):
 
     # ── ESTILOS DINÁMICOS DE TABLA ──
     style_rules = [
+<<<<<<< HEAD
         # Grid general (Bordes negros como en la imagen)
         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
         
@@ -572,11 +646,28 @@ def generar_pdf(nombre_lista, productos, cfg):
         ("BOTTOMPADDING", (0, 2), (-1, -1), 2.5),
         ("LEFTPADDING", (0, 0), (-1, -1), 3),
         ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+=======
+        # Header de tabla
+        ("BACKGROUND", (0, 0), (-1, 0), GRIS_OSC),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, 0), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("FONTSIZE", (0, 1), (-1, -1), 7.5),
+        ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
+        ("LINEBELOW", (0, 0), (-1, 0), 2, ROJO_W),
+        ("LINEABOVE", (0, 1), (-1, -1), 0.2, colors.HexColor("#D5DBDB")),
+        ("LINEBELOW", (0, 1), (-1, -1), 0.2, colors.HexColor("#D5DBDB")),
+>>>>>>> a6d5004 (Mejora pdf)
     ]
 
     # Aplicar estilos por fila (Categorias y Productos)
     row_idx = 2
     for categoria, productos_cat in sorted(productos_por_categoria.items()):
+<<<<<<< HEAD
         # Estilo para fila de categoría (Más delgada y fondo rojo)
         style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), ROJO_W))
         style_rules.append(("SPAN", (0, row_idx), (-1, row_idx)))
@@ -586,12 +677,35 @@ def generar_pdf(nombre_lista, productos, cfg):
 
         for i in range(len(productos_cat)):
             bg_color = BLANCO
+=======
+        # Estilo para fila de categoría
+        style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), ROJO_W))
+        style_rules.append(("SPAN", (0, row_idx), (-1, row_idx)))
+        style_rules.append(("TOPPADDING", (0, row_idx), (-1, row_idx), 6))
+        style_rules.append(("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 6))
+        style_rules.append(("LINEABOVE", (0, row_idx), (-1, row_idx), 1, GRIS_OSC))
+        style_rules.append(("LINEBELOW", (0, row_idx), (-1, row_idx), 1, GRIS_OSC))
+        row_idx += 1
+
+        for i in range(len(productos_cat)):
+            bg_color = colors.HexColor("#F9F9F9") if (row_idx % 2) == 0 else BLANCO
+>>>>>>> a6d5004 (Mejora pdf)
             style_rules.append(("BACKGROUND", (0, row_idx), (-1, row_idx), bg_color))
+            style_rules.append(
+                (
+                    "LINEBELOW",
+                    (0, row_idx),
+                    (-1, row_idx),
+                    0.5,
+                    colors.HexColor("#E5E7E9"),
+                )
+            )
             row_idx += 1
 
     tabla.setStyle(TableStyle(style_rules))
     story.append(tabla)
 
+<<<<<<< HEAD
     # ── HANDLERS PARA IMÁGENES DE HEADER Y FOOTER ──
     from reportlab.lib.utils import ImageReader
 
@@ -624,6 +738,131 @@ def generar_pdf(nombre_lista, productos, cfg):
 
     def on_page_cb(canvas, doc):
         draw_backgrounds(canvas, doc)
+=======
+    # ── HEADER IMPACTANTE CON MARCAS (ESTILO IMAGEN 1) ──
+    def draw_header(canvas, doc):
+        canvas.saveState()
+        width, height = doc.pagesize
+
+        # 1. Tira de marcas superior
+        marcas = [
+            "ADATA",
+            "alcatel",
+            "Apple",
+            "Acronis",
+            "APC",
+            "ASUS",
+            "BESTLIFE",
+            "BOSE",
+            "crucial",
+            "DELL EMC",
+            "Genius",
+            "Honeywell",
+            "hp",
+            "JBL",
+            "kaspersky",
+            "Lenovo",
+            "MERCUSYS",
+            "Microsoft",
+            "motorola",
+            "SAMSUNG",
+            "SAT",
+            "ViewSonic",
+            "Western Digital",
+            "mi",
+            "HÜG",
+        ]
+        canvas.setFillColor(colors.HexColor("#ECF0F1"))
+        canvas.rect(0, height - 0.7 * cm, width, 0.7 * cm, fill=1, stroke=0)
+
+        canvas.setFont("Helvetica-Bold", 6.5)
+        canvas.setFillColor(GRIS_OSC)
+        marcas_str = "    ".join(marcas)
+        canvas.drawCentredString(width / 2.0, height - 0.5 * cm, marcas_str)
+
+        # Línea separadora sutil bajo las marcas
+        canvas.setStrokeColor(ROJO_W)
+        canvas.setLineWidth(1)
+        canvas.line(0, height - 0.7 * cm, width, height - 0.7 * cm)
+
+        # 2. wondertech Reseller Logo (Texto moderno)
+        logo_y = height - 1.8 * cm
+        logo_x = 1.0 * cm
+        str_wondertech = "wondertech "
+
+        canvas.setFillColor(GRIS_OSC)
+        canvas.setFont("Helvetica-Bold", 22)
+        canvas.drawString(logo_x, logo_y, str_wondertech)
+
+        w_width = canvas.stringWidth(str_wondertech, "Helvetica-Bold", 22)
+
+        canvas.setFillColor(ROJO_W)
+        canvas.setFont("Helvetica", 22)
+        canvas.drawString(logo_x + w_width, logo_y, "Reseller")
+
+        # 3. Datos Título y Contacto a la derecha
+        canvas.setFillColor(GRIS_OSC)
+        canvas.setFont("Helvetica-Bold", 16)
+        canvas.drawRightString(width - 1.0 * cm, height - 1.6 * cm, "LISTA DE PRECIOS")
+
+        canvas.setFont("Helvetica", 12)
+        canvas.setFillColor(ROJO_W)
+        canvas.drawRightString(
+            width - 1.0 * cm, height - 2.1 * cm, nombre_lista.upper()
+        )
+
+        # Línea decorativa fuerte
+        canvas.setStrokeColor(ROJO_W)
+        canvas.setLineWidth(2.5)
+        canvas.line(1.0 * cm, height - 2.4 * cm, width - 1.0 * cm, height - 2.4 * cm)
+
+        canvas.restoreState()
+
+    # ── FOOTER IMPACTANTE CON CURVA MAGENTA (ESTILO IMAGEN 2) ──
+    def draw_footer(canvas, doc):
+        canvas.saveState()
+        width, height = doc.pagesize
+
+        # 1. Curva Magenta en el fondo
+        canvas.setFillColor(ROJO_W)
+        p = canvas.beginPath()
+        p.moveTo(0, 0)
+        p.lineTo(0, 2.2 * cm)
+        # Bézier Curve smoothly sweeping across the footer
+        p.curveTo(width / 3.0, 3.4 * cm, 2.0 * width / 3.0, 3.4 * cm, width, 2.2 * cm)
+        p.lineTo(width, 0)
+        p.close()
+        canvas.drawPath(p, fill=1, stroke=0)
+
+        # 2. Textos sobre la curva en Blanco
+        canvas.setFillColor(BLANCO)
+
+        # Teléfono y Web
+        canvas.setFont("Helvetica-Bold", 12)
+        canvas.drawCentredString(
+            width / 2.0,
+            1.5 * cm,
+            f"✆ {cfg.get('telefono', '')}      🌐 {cfg.get('web', '')}",
+        )
+
+        # Dirección
+        canvas.setFont("Helvetica", 10)
+        canvas.drawCentredString(
+            width / 2.0, 0.8 * cm, f"📍 {cfg.get('direccion', '')}"
+        )
+
+        # Colombia y Paginación
+        canvas.setFont("Helvetica", 8)
+        canvas.drawString(1.0 * cm, 0.5 * cm, "🇨🇴  Colombia")
+        canvas.drawRightString(width - 1.0 * cm, 0.5 * cm, f"Página {doc.page}")
+
+        canvas.restoreState()
+
+    # ── PAGINACIÓN ──
+    def on_first_page(canvas, doc):
+        draw_header(canvas, doc)
+        draw_footer(canvas, doc)
+>>>>>>> a6d5004 (Mejora pdf)
 
     doc.build(story, onFirstPage=on_page_cb, onLaterPages=on_page_cb)
     print(f"✅ PDF generado: PDFs/output/{nombre_archivo}")
