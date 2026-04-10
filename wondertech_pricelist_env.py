@@ -1,13 +1,13 @@
 """
 =============================================================
-  WONDERTECH - Generador de Listas de Precios desde Odoo
+WONDERTECH - Generador de Listas de Precios desde Odoo
 =============================================================
-  Uso:
+Uso:
     1. Crea un archivo .env con las credenciales del ambiente
     2. Ejecuta: python wondertech_pricelist_env.py
     3. Los PDFs se guardan en la carpeta donde ejecutas el script
 
-  Requisitos:
+Requisitos:
     pip install reportlab python-dotenv
 =============================================================
 """
@@ -20,7 +20,7 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT   
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
@@ -236,6 +236,11 @@ def buscar_lista(models, uid, cfg, nombre_lista):
 
     productos = []
     for item in items_raw:
+        marca = ""
+        tipo_producto = ""
+        es_favorito = False
+        tmpl_id = None
+
         if item.get("product_id"):
             prod_id = item["product_id"][0]
             prod_info = models.execute_kw(
@@ -247,16 +252,19 @@ def buscar_lista(models, uid, cfg, nombre_lista):
                 [[prod_id]],
                 {"fields": ["name", "default_code", "categ_id", "product_tmpl_id"]},
             )
-            nombre_completo = prod_info[0]["name"] if prod_info else ""
-            sku_interno = prod_info[0].get("default_code") or ""
-            categ_id = prod_info[0].get("categ_id")
+            if not prod_info:
+                print(f"⚠️  Producto ID {prod_id} no encontrado. Se omite.")
+                continue
+
+            prod_record = prod_info[0]
+            nombre_completo = prod_record.get("name") or ""
+            sku_interno = prod_record.get("default_code") or ""
+            categ_id = prod_record.get("categ_id")
             tmpl_id = (
-                prod_info[0].get("product_tmpl_id", [None])[0]
-                if prod_info[0].get("product_tmpl_id")
+                prod_record.get("product_tmpl_id", [None])[0]
+                if prod_record.get("product_tmpl_id")
                 else None
             )
-            es_favorito = False  # Se obtiene del template más abajo
-            tipo_producto = ""  # Se obtiene más abajo del template
         elif item.get("product_tmpl_id"):
             tmpl_id = item["product_tmpl_id"][0]
             tmpl_info = models.execute_kw(
@@ -277,19 +285,24 @@ def buscar_lista(models, uid, cfg, nombre_lista):
                     ]
                 },
             )
-            nombre_completo = tmpl_info[0]["name"] if tmpl_info else ""
-            sku_interno = tmpl_info[0].get("default_code") or ""
-            categ_id = tmpl_info[0].get("categ_id")
-            marca = tmpl_info[0].get("x_studio_marca") or ""
+            if not tmpl_info:
+                print(f"⚠️  Template ID {tmpl_id} no encontrado. Se omite.")
+                continue
+
+            tmpl_record = tmpl_info[0]
+            nombre_completo = tmpl_record.get("name") or ""
+            sku_interno = tmpl_record.get("default_code") or ""
+            categ_id = tmpl_record.get("categ_id")
+            marca = tmpl_record.get("x_studio_marca") or ""
             tipo_producto = (
-                tmpl_info[0].get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
+                tmpl_record.get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
             )
-            es_favorito = tmpl_info[0].get("is_favorite", False)
+            es_favorito = tmpl_record.get("is_favorite", False)
         else:
             continue
 
-        # Obtener tipo de producto y favorito desde el template
-        if not tipo_producto and tmpl_id:
+        # Completar datos faltantes desde el template
+        if tmpl_id and (not tipo_producto or not marca or not es_favorito):
             tmpl_info = models.execute_kw(
                 db,
                 uid,
@@ -297,15 +310,24 @@ def buscar_lista(models, uid, cfg, nombre_lista):
                 "product.template",
                 "read",
                 [[tmpl_id]],
-                {"fields": ["x_studio_selection_field_6ob_1j1gf5dtp", "is_favorite"]},
+                {
+                    "fields": [
+                        "x_studio_marca",
+                        "x_studio_selection_field_6ob_1j1gf5dtp",
+                        "is_favorite",
+                    ]
+                },
             )
             if tmpl_info:
+                tmpl_record = tmpl_info[0]
+                if not marca:
+                    marca = tmpl_record.get("x_studio_marca") or ""
                 if not tipo_producto:
                     tipo_producto = (
-                        tmpl_info[0].get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
+                        tmpl_record.get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
                     )
                 if not es_favorito:
-                    es_favorito = tmpl_info[0].get("is_favorite", False)
+                    es_favorito = tmpl_record.get("is_favorite", False)
 
         marca, sku, descripcion = parsear_producto(nombre_completo, sku_interno, marca)
         categoria_final = tipo_producto if tipo_producto else "SIN CATEGORÍA"
@@ -479,8 +501,7 @@ def generar_pdf(nombre_lista, productos, cfg):
     col_widths = [
         3.0 * cm,   # MARCA
         3.0 * cm,   # SKU
-        14.2 * cm,  # DESCRIPCIÓN 
-        2.2 * cm,   # CIUDAD
+        16.4 * cm,  # DESCRIPCIÓN
         1.8 * cm,   # TIPO MONEDA
         3.5 * cm,   # PRECIO
     ]
@@ -496,14 +517,13 @@ def generar_pdf(nombre_lista, productos, cfg):
     )
 
     # Fila 0: Vigencia (abarcando todas las columnas, fondo rojo)
-    fila_vigencia = [Paragraph(cfg["vigencia"], vigencia_style), "", "", "", "", ""]
+    fila_vigencia = [Paragraph(cfg["vigencia"], vigencia_style), "", "", "", ""]
 
     # Fila 1: Nombres de columnas
     encabezado = [
         Paragraph("MARCA", header_style),
         Paragraph("SKU", header_style),
         Paragraph("DESCRIPCIÓN", header_style),
-        Paragraph("CIUDAD", header_style),
         Paragraph("TIPO\nMONEDA", header_style),
         Paragraph("PRECIO IVA\nINCLUIDO SI\nAPLICA", header_style),
     ]
@@ -522,13 +542,12 @@ def generar_pdf(nombre_lista, productos, cfg):
         cat = p["categoria"] if p["categoria"] else "SIN CATEGORÍA"
         productos_por_categoria[cat].append(p)
 
-    c_ciudad = cfg.get("ciudad", "BOGOTA")
     c_moneda = cfg.get("moneda", "COP")
 
     # Construir filas
     for categoria, productos_cat in sorted(productos_por_categoria.items()):
         # Fila separadora de categoría
-        filas.append([Paragraph(categoria.upper(), cat_style), "", "", "", "", ""])
+        filas.append([Paragraph(categoria.upper(), cat_style), "", "", "", ""])
 
         # Filas de productos
         for p in productos_cat:
@@ -536,7 +555,6 @@ def generar_pdf(nombre_lista, productos, cfg):
                 Paragraph(p["marca"], cell_center),
                 Paragraph(p["sku"], cell_center),
                 Paragraph(p["descripcion"], cell_style),
-                Paragraph(c_ciudad, cell_center),
                 Paragraph(c_moneda, cell_center),
                 Paragraph(formatear_precio(p["precio"], cfg.get("simbolo_moneda", "$")), price_style),
             ]
