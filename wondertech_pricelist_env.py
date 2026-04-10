@@ -473,13 +473,13 @@ def generar_pdf(nombre_lista, productos, cfg):
         canvas.drawString(2 * cm, page_height - 2.85 * cm, f"📞  {cfg['telefono']}")
         
         # Web (center-left)
-        canvas.drawString(page_width / 2 - 4 * cm, page_height - 2.85 * cm, f"🌐  {cfg['web']}")
+        canvas.drawString(page_width / 2 - 4 * cm, page_height - 2.90 * cm, f"🌐  {cfg['web']}")
         
         # Address (center-right)
-        canvas.drawString(page_width / 2 + 1 * cm, page_height - 2.85 * cm, f"📍  {cfg['direccion']}")
+        canvas.drawString(page_width / 2 + 1 * cm, page_height - 2.90 * cm, f"📍  {cfg['direccion']}")
         
         # Country (right)
-        canvas.drawString(page_width - 3.8 * cm, page_height - 2.85 * cm, "🇨🇴  Colombia")
+        canvas.drawString(page_width - 3.8 * cm, page_height - 2.90 * cm, "🇨🇴  Colombia")
         
         canvas.restoreState()
 
