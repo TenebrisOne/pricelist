@@ -20,15 +20,13 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT   
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import (
-    HRFlowable,
     Paragraph,
     SimpleDocTemplate,
-    Spacer,
     Table,
     TableStyle,
 )
@@ -259,7 +257,6 @@ def buscar_lista(models, uid, cfg, nombre_lista):
             prod_record = prod_info[0]
             nombre_completo = prod_record.get("name") or ""
             sku_interno = prod_record.get("default_code") or ""
-            categ_id = prod_record.get("categ_id")
             tmpl_id = (
                 prod_record.get("product_tmpl_id", [None])[0]
                 if prod_record.get("product_tmpl_id")
@@ -292,7 +289,6 @@ def buscar_lista(models, uid, cfg, nombre_lista):
             tmpl_record = tmpl_info[0]
             nombre_completo = tmpl_record.get("name") or ""
             sku_interno = tmpl_record.get("default_code") or ""
-            categ_id = tmpl_record.get("categ_id")
             marca = tmpl_record.get("x_studio_marca") or ""
             tipo_producto = (
                 tmpl_record.get("x_studio_selection_field_6ob_1j1gf5dtp") or ""
