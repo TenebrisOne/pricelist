@@ -485,8 +485,8 @@ def generar_pdf(nombre_lista, productos, cfg):
         pagesize=landscape(A4),
         leftMargin=1.0 * cm,
         rightMargin=1.0 * cm,
-        topMargin=7.2 * cm,    # Ajustado a proporción exacta de la imagen (6.93cm)
-        bottomMargin=3.8 * cm, # Ajustado a proporción exacta del footer (3.6cm)
+        topMargin=6.5 * cm,    # Reducido: Header mas compacto
+        bottomMargin=3.7 * cm, # Reducido: Footer mas compacto
         title=f"Lista de Precios - {nombre_lista}",
         author=cfg["empresa"],
     )
@@ -620,28 +620,34 @@ def generar_pdf(nombre_lista, productos, cfg):
 
     def draw_backgrounds(canvas, doc):
         canvas.saveState()
-        width = doc.pagesize[0]
-        height = doc.pagesize[1]
+        page_w = doc.pagesize[0]
+        page_h = doc.pagesize[1]
         
-        # Dibujar Imagen del Header (oficina + curva)
+        # Alinear exactamente con la tabla
+        draw_w = page_w - doc.leftMargin - doc.rightMargin
+        start_x = doc.leftMargin
+        
         if os.path.exists(img_header):
             try:
                 img_reader = ImageReader(img_header)
                 img_w, img_h = img_reader.getSize()
-                draw_h = width * img_h / img_w
-                canvas.drawImage(img_reader, 0, height - draw_h, width=width, height=draw_h, mask='auto')
+                prop_h = draw_w * img_h / img_w
+                draw_h = prop_h * 0.90
+                start_y = page_h - draw_h - 0.3 * cm
+                canvas.drawImage(img_reader, start_x, start_y, width=draw_w, height=draw_h, mask='auto')
             except Exception as e:
-                print(f"Error dibujando header: {e}")
+                pass
 
-        # Dibujar Imagen del Footer (logos marcas)
         if os.path.exists(img_footer):
             try:
                 img_reader = ImageReader(img_footer)
                 img_w, img_h = img_reader.getSize()
-                draw_h = width * img_h / img_w
-                canvas.drawImage(img_reader, 0, 0, width=width, height=draw_h, mask='auto')
+                prop_h = draw_w * img_h / img_w
+                draw_h = prop_h * 0.90
+                start_y = 0.4 * cm
+                canvas.drawImage(img_reader, start_x, start_y, width=draw_w, height=draw_h, mask='auto')
             except Exception as e:
-                print(f"Error dibujando footer: {e}")
+                pass
 
         canvas.restoreState()
 
