@@ -334,6 +334,12 @@ def health():
     )
 
 
+@app.route("/webhook", methods=["GET", "POST"])
+def webhook_main():
+    """Webhook principal para Odoo (curl -X POST http://localhost:5008/webhook)"""
+    return _handle_generation(default_to_all=True, default_pdf=False)
+
+
 @app.route("/webhook/odoo", methods=["GET", "POST"])
 def webhook_odoo():
     return _handle_generation(default_to_all=True, default_pdf=False)
@@ -355,7 +361,7 @@ def webhook_generate_all():
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "5000"))
+    port = int(os.getenv("PORT", "5008"))
     debug = _to_bool(os.getenv("FLASK_DEBUG"), default=False)
 
     print("\n" + "=" * 55)

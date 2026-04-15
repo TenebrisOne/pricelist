@@ -1,2 +1,10 @@
 PDFs/
-/__pycache__
+__pycache__/
+*.pyc
+.env
+venv/
+logs/
+*.log
+.DS_Store
+node_modules/
+ecosystem.config.js

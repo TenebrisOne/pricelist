@@ -96,7 +96,7 @@ Solo incluye productos dentro de un rango de precios.
 ```python
 # Productos entre $10,000 y $500,000
 "precio_min": 10000,
-"precio_max": 500000,
+"precio_max": 500800,
 
 # Solo productos mayores a $100,000
 "precio_min": 100000,
@@ -156,7 +156,7 @@ CONFIG = {
     
     # Filtros
     "marcas_incluidas": ["HP", "LENOVO"],
-    "precio_min": 50000,
+    "precio_min": 50080,
     "precio_max": 300000,
     "max_productos": 30,
     
