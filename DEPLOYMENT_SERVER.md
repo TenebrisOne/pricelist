@@ -3,10 +3,13 @@
 ## 📍 Tu Configuración
 
 - **Local:** `c:\Users\CristianRuiz\OneDrive - WONDERTECH 365\Documentos\Python Projects\lista de precios`
-- **Remoto:** `cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks`
+- **Remoto:** `cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/WEBHOOK_PRICELIST`
 - **Usuario:** `cristianwonder`
 - **Servidor:** `ubuntu-s-1vcpu-1gb-sfo3-01`
-- **Path remoto:** `/var/www/webhooks`
+- **Path remoto:** `/var/www/webhooks/WEBHOOK_PRICELIST`
+
+> ⚠️ **Nota:** `/var/www/webhooks` es compartido con otros webhooks de la empresa.
+> Tu proyecto vive en `/var/www/webhooks/WEBHOOK_PRICELIST`.
 
 ---
 
@@ -26,7 +29,7 @@ Si tienes Git Bash o WSL instalado:
 ```bash
 rsync -avz --exclude '.git' --exclude '__pycache__' --exclude '*.pyc' --exclude 'venv' --exclude '.env' --exclude 'PDFs/output/*' --exclude 'logs/*' \
   "./" \
-  cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/
+  cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/WEBHOOK_PRICELIST/
 ```
 
 **Opción B: Usando scp**
@@ -34,7 +37,7 @@ rsync -avz --exclude '.git' --exclude '__pycache__' --exclude '*.pyc' --exclude 
 Desde PowerShell:
 ```powershell
 # Subir todo el directorio (primera vez)
-scp -r "./" cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/
+scp -r "./" cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/WEBHOOK_PRICELIST/
 ```
 
 **Opción C: Usando scp con exclude manual (si rsync no está disponible)**
@@ -42,13 +45,13 @@ scp -r "./" cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/
 Sube solo lo necesario:
 ```powershell
 # Archivos principales
-scp api_wondertech.py wondertech_pricelist_env.py requirements.txt ecosystem.config.js cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/
+scp api_wondertech.py wondertech_pricelist_env.py requirements.txt ecosystem.config.js cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/WEBHOOK_PRICELIST/
 
 # Crear directorios en el servidor primero
-ssh cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01 "mkdir -p /var/www/webhooks/{PDFs/output,PDFs/img,logs}"
+ssh cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01 "mkdir -p /var/www/webhooks/WEBHOOK_PRICELIST/{PDFs/output,PDFs/img,logs}"
 
 # Si tienes imágenes en PDFs/img, súbelas también
-scp ./PDFs/img/* cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/PDFs/img/
+scp ./PDFs/img/* cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/WEBHOOK_PRICELIST/PDFs/img/
 ```
 
 ### Paso 3: Conectar al servidor y configurar
@@ -58,7 +61,7 @@ scp ./PDFs/img/* cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/PDF
 ssh cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01
 
 # Ir al directorio
-cd /var/www/webhooks
+cd /var/www/webhooks/WEBHOOK_PRICELIST
 ```
 
 ### Paso 4: Configurar el archivo .env
@@ -107,7 +110,7 @@ Guarda con: `Ctrl+O`, `Enter`, `Ctrl+X`
 ### Paso 5: Configurar Python
 
 ```bash
-cd /var/www/webhooks
+cd /var/www/webhooks/WEBHOOK_PRICELIST
 
 # Verificar Python
 python3 --version
@@ -128,7 +131,7 @@ pip install -r requirements.txt
 ### Paso 6: Crear directorios necesarios
 
 ```bash
-cd /var/www/webhooks
+cd /var/www/webhooks/WEBHOOK_PRICELIST
 
 mkdir -p PDFs/output PDFs/img logs
 
@@ -140,7 +143,7 @@ chmod -R 755 PDFs
 ### Paso 7: Probar la aplicación
 
 ```bash
-cd /var/www/webhooks
+cd /var/www/webhooks/WEBHOOK_PRICELIST
 source venv/bin/activate
 
 # Ejecutar en foreground para probar
@@ -187,7 +190,7 @@ Detener con `Ctrl+C` en la terminal donde ejecutaste la app.
 ### Paso 8: Configurar PM2
 
 ```bash
-cd /var/www/webhooks
+cd /var/www/webhooks/WEBHOOK_PRICELIST
 
 # Verificar PM2
 pm2 --version
@@ -275,7 +278,7 @@ curl -X POST https://TU_DOMINIO/pricelist/webhook/generate/Lista_Business \
 ### En el servidor (SSH):
 ```bash
 # Ir al directorio
-cd /var/www/webhooks
+cd /var/www/webhooks/WEBHOOK_PRICELIST
 
 # Activar entorno virtual
 source venv/bin/activate
@@ -304,10 +307,10 @@ ssh cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01
 # Subir cambios después de modificar algo local
 rsync -avz --exclude '.git' --exclude '__pycache__' --exclude '*.pyc' --exclude 'venv' --exclude '.env' --exclude 'PDFs/output/*' --exclude 'logs/*' \
   "./" \
-  cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/
+  cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/WEBHOOK_PRICELIST/
 
 # O con scp (sube todo)
-scp -r "./" cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/
+scp -r "./" cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/WEBHOOK_PRICELIST/
 ```
 
 ---
@@ -322,19 +325,19 @@ cd "c:\Users\CristianRuiz\OneDrive - WONDERTECH 365\Documentos\Python Projects\l
 
 rsync -avz --exclude '.git' --exclude '__pycache__' --exclude '*.pyc' --exclude 'venv' --exclude '.env' --exclude 'PDFs/output/*' --exclude 'logs/*' \
   "./" \
-  cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/
+  cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/WEBHOOK_PRICELIST/
 ```
 
 ### Opción B: SCP (todo de nuevo)
 ```powershell
-scp -r "./" cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/
+scp -r "./" cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/WEBHOOK_PRICELIST/
 ```
 
 ### Luego, en el servidor (SSH):
 ```bash
 ssh cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01
 
-cd /var/www/webhooks
+cd /var/www/webhooks/WEBHOOK_PRICELIST
 source venv/bin/activate
 
 # Si hay nuevas dependencias en requirements.txt
@@ -352,7 +355,7 @@ pm2 logs wondertech-pricelist
 ## 📁 Estructura Final en el Servidor
 
 ```
-/var/www/webhooks/
+/var/www/webhooks/WEBHOOK_PRICELIST/
 ├── api_wondertech.py              # App principal
 ├── wondertech_pricelist_env.py    # Lógica de generación
 ├── ecosystem.config.js            # Config PM2
@@ -379,10 +382,10 @@ pm2 logs wondertech-pricelist
 # Verificar permisos del directorio remoto
 ssh cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01
 ls -la /var/www/
-ls -la /var/www/webhooks/
+ls -la /var/www/webhooks/WEBHOOK_PRICELIST/
 
 # Si no tienes permisos de escritura:
-sudo chown -R cristianwonder:cristianwonder /var/www/webhooks
+sudo chown -R cristianwonder:cristianwonder /var/www/webhooks/WEBHOOK_PRICELIST
 # (Si no tienes sudo, pide al admin que lo haga)
 ```
 
@@ -424,7 +427,7 @@ netstat -tulpn 2>/dev/null | grep 5000
 pm2 logs wondertech-pricelist --err
 
 # Probar manualmente
-cd /var/www/webhooks
+cd /var/www/webhooks/WEBHOOK_PRICELIST
 source venv/bin/activate
 python api_wondertech.py
 
@@ -436,7 +439,7 @@ pm2 start ecosystem.config.js
 ### ❌ Error de conexión a Odoo
 ```bash
 # Verificar .env
-cat /var/www/webhooks/.env
+cat /var/www/webhooks/WEBHOOK_PRICELIST/.env
 
 # Probar conexión
 curl -I https://wondertechsas.odoo.com/jsonrpc
@@ -450,7 +453,7 @@ pm2 logs wondertech-pricelist --lines 100
 ## 📊 Monitoreo
 
 ### Script rápido de verificación
-Crea `/var/www/webhooks/check.sh`:
+Crea `/var/www/webhooks/WEBHOOK_PRICELIST/check.sh`:
 ```bash
 #!/bin/bash
 echo "=== Wondertech PriceList Status ==="
@@ -466,14 +469,14 @@ else
 fi
 echo ""
 echo "💾 Espacio usado:"
-du -sh /var/www/webhooks/PDFs/output/ 2>/dev/null || echo "Sin PDFs"
+du -sh /var/www/webhooks/WEBHOOK_PRICELIST/PDFs/output/ 2>/dev/null || echo "Sin PDFs"
 echo ""
 echo "📝 Últimos errores:"
-tail -5 /var/www/webhooks/logs/pm2-error.log 2>/dev/null || echo "Sin errores"
+tail -5 /var/www/webhooks/WEBHOOK_PRICELIST/logs/pm2-error.log 2>/dev/null || echo "Sin errores"
 ```
 
 ```bash
-chmod +x /var/www/webhooks/check.sh
+chmod +x /var/www/webhooks/WEBHOOK_PRICELIST/check.sh
 ./check.sh
 ```
 

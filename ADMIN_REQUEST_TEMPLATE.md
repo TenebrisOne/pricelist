@@ -2,36 +2,35 @@
 
 ---
 
-## 📧 Template: Solicitud de Configuración Nginx
+## 📧 Template: Solicitud de Ruta en Nginx
 
-**Asunto:** Solicitud de ruta en Nginx para webhook de generación de listas de precios
+**Asunto:** Agregar location para WEBHOOK_PRICELIST en nginx
 
 ---
 
 Hola!
 
-He desplegado una aplicación de generación de listas de precios en el servidor y necesito 
-que agregues una ruta en la configuración de Nginx para hacerla accesible vía webhook.
+Desplegué un nuevo webhook en el servidor y necesito que agregues una `location` en el
+server block de nginx para hacerlo accesible.
 
 ### 📍 Estado Actual
-- ✅ La aplicación ya está corriendo con PM2 en: `/home/TU_USUARIO/apps/pricelist`
-- ✅ Escuchando en: `http://127.0.0.1:5008`
+- ✅ El webhook está en: `/var/www/webhooks/WEBHOOK_PRICELIST`
+- ✅ Escuchando en: `http://127.0.0.1:5000`
 - ✅ Proceso PM2 activo y monitoreado
 
 ### 🔧 Lo que necesito
 
-**Opción A (Recomendada):** Agregar como subruta en el server block existente
+Agregar esta `location` en el server block de nginx que ya compartimos:
 
 ```nginx
-# En el server block de nginx.conf (ej: /etc/nginx/sites-available/default o el que use)
 location /pricelist/ {
-    proxy_pass http://127.0.0.1:5008/;
+    proxy_pass http://127.0.0.1:5000/;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    
+
     # Timeouts para generación de PDFs (puede tardar)
     proxy_connect_timeout 120;
     proxy_send_timeout 120;
@@ -39,51 +38,24 @@ location /pricelist/ {
 }
 ```
 
-**Opción B:** Crear un subdominio dedicado
-
-```nginx
-server {
-    listen 80;
-    server_name pricelist.TU_DOMINIO_ACTUAL.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:5008;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
 ### 🔗 Endpoints que quedarán disponibles
 
-Con la **Opción A** (subruta):
-- `https://TU_DOMINIO/pricelist/` - Health check
-- `https://TU_DOMINIO/pricelist/webhook/odoo` - Webhook principal (para Odoo)
-- `https://TU_DOMINIO/pricelist/webhook/generate-all` - Generar todas las listas
-- `https://TU_DOMINIO/pricelist/webhook/generate/Lista_Business` - Generar lista específica
-
-Con la **Opción B** (subdominio):
-- `https://pricelist.TU_DOMINIO.com/` - Health check
-- `https://pricelist.TU_DOMINIO.com/webhook/odoo` - Webhook principal
-- `https://pricelist.TU_DOMINIO.com/webhook/generate-all` - Generar todas
-- `https://pricelist.TU_DOMINIO.com/webhook/generate/Lista_Business` - Generar específica
+- `https://TU_DOMINIO/pricelist/` — Health check
+- `https://TU_DOMINIO/pricelist/webhook/odoo` — Webhook principal (para Odoo)
+- `https://TU_DOMINIO/pricelist/webhook/generate-all` — Generar todas las listas
+- `https://TU_DOMINIO/pricelist/webhook/generate/Lista_Business` — Generar lista específica
 
 ### 📝 Notas
-- Es una aplicación Flask (Python) corriendo con Gunicorn a través de PM2
-- No necesita archivos estáticos públicos
-- Genera PDFs que se guardan en el servidor (no necesita acceso público a ellos)
-- El webhook será llamado desde Odoo (sistema ERP) y ocasionalmente manualmente
-- La generación de PDFs puede tardar 10-30 segundos dependiendo de la cantidad de productos
+- Es una aplicación Flask (Python) corriendo con PM2
+- Genera PDFs que se guardan en el servidor
+- El webhook será llamado desde Odoo y ocasionalmente manualmente
+- La generación de PDFs puede tardar 10-30 segundos
 
-### 🧪 Verificación después de configurar
+### 🧪 Verificación
 
-Una vez agregues la configuración, por favor ejecuta:
+Una vez agregues la location, ejecuta:
 ```bash
-sudo nginx -t  # Verificar que la configuración es válida
-sudo systemctl reload nginx  # Aplicar cambios
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 Yo verificaré desde mi lado con:
@@ -91,29 +63,15 @@ Yo verificaré desde mi lado con:
 curl https://TU_DOMINIO/pricelist/
 ```
 
-¿Puedes avisarme cuando lo configures para que pueda probarlo?
-
 ¡Gracias!
 
 ---
 
-## 📞 Información de Contacto
+## 📞 Info para el Admin
 
-Si necesitas más detalles o hay algún problema:
-- La app está en: `/home/TU_USUARIO/apps/pricelist`
-- Logs de PM2: `pm2 logs wondertech-pricelist`
-- Puedes verificar que está corriendo con: `curl http://127.0.0.1:5008/`
-
----
-
-## 🔐 Seguridad (opcional mencionar)
-
-Si el webhook necesita protección:
-- Puedo agregar autenticación por token en la app
-- O podemos agregar basic auth en nginx si es necesario
-- El webhook de Odoo puede enviar un token en los headers
+Si necesitas verificar:
+- El webhook está en: `/var/www/webhooks/WEBHOOK_PRICELIST`
+- Logs PM2: `pm2 logs WEBHOOK_PRICELIST`
+- Verificar que corre: `curl http://127.0.0.1:5000/`
 
 ---
-
-**Versión:** 1.0  
-**Fecha:** Abril 2026

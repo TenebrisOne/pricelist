@@ -30,7 +30,7 @@ Sigue la guía completa en **DEPLOYMENT_SERVER.md**
 
 - **Local:** `c:\Users\CristianRuiz\OneDrive - WONDERTECH 365\Documentos\Python Projects\lista de precios`
 - **Servidor:** `cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01`
-- **Remoto:** `/var/www/webhooks`
+- **Remoto:** `/var/www/webhooks/WEBHOOK_PRICELIST`
 - **Puerto:** 5000
 
 ---
@@ -48,7 +48,7 @@ cd "c:\Users\CristianRuiz\OneDrive - WONDERTECH 365\Documentos\Python Projects\l
 ```bash
 # Conectar
 ssh cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01
-cd /var/www/webhooks
+cd /home/cristianwonder/apps/pricelist
 
 # Crear .env
 nano .env
@@ -99,11 +99,11 @@ pm2 monit                     # Monitoreo
 ```powershell
 # Desde Windows PowerShell
 rsync -avz --exclude '.git' --exclude '__pycache__' --exclude 'venv' --exclude '.env' \
-  "./" cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/var/www/webhooks/
+  "./" cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01:/home/cristianwonder/apps/pricelist/
 
 # Luego en el servidor:
 ssh cristianwonder@ubuntu-s-1vcpu-1gb-sfo3-01
-cd /var/www/webhooks
+cd /home/cristianwonder/apps/pricelist
 source venv/bin/activate
 pm2 restart wondertech-pricelist
 ```

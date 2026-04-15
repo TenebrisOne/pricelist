@@ -1,175 +1,299 @@
 ﻿# ============================================
 # Deploy Script - Wondertech PriceList
+# Soporta: GitHub, pscp (PuTTY), plink
 # Ejecutar desde PowerShell
 # ============================================
 
-Write-Host ""
-Write-Host "================================================" -ForegroundColor Cyan
-Write-Host "  WONDERTECH - Deploy a Servidor" -ForegroundColor Cyan
-Write-Host "================================================" -ForegroundColor Cyan
-Write-Host ""
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$ErrorActionPreference = 'Stop'
 
-# Configuración
+# Configuracion
 $LOCAL_PATH = "c:\Users\CristianRuiz\OneDrive - WONDERTECH 365\Documentos\Python Projects\lista de precios"
 $REMOTE_USER = "cristianwonder"
-$REMOTE_HOST = "ubuntu-s-1vcpu-1gb-sfo3-01"
-$REMOTE_PATH = "/var/www/webhooks"
+$REMOTE_HOST = "143.244.180.163"
+$REMOTE_WEBHOOKS = "/var/www/webhooks"
+$PROJECT_NAME = "WEBHOOK_PRICELIST"
+$REMOTE_PATH = "$REMOTE_WEBHOOKS/$PROJECT_NAME"
+$SSH_KEY = "C:\Users\CristianRuiz\OneDrive - WONDERTECH 365\Documentos\cristianwonder.ppk"
+$PLINK = "C:\Program Files\PuTTY\plink.exe"
+$PSCP = "C:\Program Files\PuTTY\pscp.exe"
+$PORT = 5000
 
-# Cambiar al directorio local
-Set-Location -Path $LOCAL_PATH
-Write-Host "📁 Directorio local: $LOCAL_PATH" -ForegroundColor Green
+# ──── Funciones visuales ────
+
+function Header($title) {
+    Write-Host ""
+    Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║  $title" -ForegroundColor Cyan
+    $padding = 58 - $title.Length
+    Write-Host ("║" + " " * $padding + "║") -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ""
+}
+
+function Section($title) {
+    Write-Host ""
+    Write-Host "═══════════════════════════════════════════════" -ForegroundColor DarkCyan
+    Write-Host "  $title" -ForegroundColor Cyan
+    Write-Host "═══════════════════════════════════════════════" -ForegroundColor DarkCyan
+    Write-Host ""
+}
+
+function Step($num, $title) {
+    Write-Host "  [$num] $title" -ForegroundColor White
+}
+
+function Success($msg) {
+    Write-Host "  ✓ " -ForegroundColor Green -NoNewline
+    Write-Host $msg -ForegroundColor Green
+}
+
+function Warning($msg) {
+    Write-Host "  ⚠ " -ForegroundColor Yellow -NoNewline
+    Write-Host $msg -ForegroundColor Yellow
+}
+
+function Error($msg) {
+    Write-Host "  ✗ " -ForegroundColor Red -NoNewline
+    Write-Host $msg -ForegroundColor Red
+}
+
+function Info($msg) {
+    Write-Host "  → " -ForegroundColor DarkGray -NoNewline
+    Write-Host $msg -ForegroundColor DarkGray
+}
+
+function Progress($file, $total) {
+    $pct = [math]::Round(($file / $total) * 100)
+    $filled = [math]::Round($pct / 5)
+    $empty = 20 - $filled
+    $bar = ("█" * $filled) + ("░" * $empty)
+    Write-Host "`r  [$bar] $pct%" -ForegroundColor Cyan -NoNewline
+}
+
+function FinishProgress {
+    Write-Host ""
+}
+
+# ──── Header ────
+
+Header "WONDERTECH - Deploy v2.0"
+
+Step "📁" "Directorio: $(Split-Path $LOCAL_PATH -Leaf)"
+Step "🖥 " "Servidor: $REMOTE_USER@$REMOTE_HOST"
+Step "📂" "Remoto:    $REMOTE_PATH"
 Write-Host ""
 
-# Paso 1: Verificar que los archivos existen
-Write-Host "🔍 Verificando archivos locales..." -ForegroundColor Yellow
+# ──── Verificar herramientas ────
+
+Section "Verificando herramientas"
+
+$hasGit = Get-Command git -ErrorAction SilentlyContinue
+$hasPlink = Test-Path $PLINK
+$hasPscp = Test-Path $PSCP
+$hasKey = Test-Path $SSH_KEY
+
+if ($hasGit) { Success "Git instalado" } else { Error "Git no encontrado" }
+if ($hasPlink) { Success "PuTTY plink disponible" } else { Warning "plink no encontrado en: $PLINK" }
+if ($hasPscp) { Success "PuTTY pscp disponible" } else { Warning "pscp no encontrado en: $PSCP" }
+if ($hasKey) { Success "SSH key encontrada" } else { Error "SSH key NO encontrada: $SSH_KEY" }
+
+if (-not $hasKey) {
+    Write-Host ""
+    Error "No se encontro la key SSH"
+    exit 1
+}
+
+# ──── Verificar archivos ────
+
+Section "Verificando archivos del proyecto"
 
 $requiredFiles = @(
     "api_wondertech.py",
     "wondertech_pricelist_env.py",
     "requirements.txt",
-    "ecosystem.config.js"
+    "ecosystem.config.js",
+    ".env",
+    "install.sh"
 )
 
 $missingFiles = @()
+$fileCount = $requiredFiles.Count
+$i = 0
+
 foreach ($file in $requiredFiles) {
+    $i++
     if (Test-Path $file) {
-        Write-Host "  ✅ $file" -ForegroundColor Green
+        Success "$file"
     } else {
-        Write-Host "  ❌ $file - NO ENCONTRADO" -ForegroundColor Red
+        Error "$file - FALTA"
         $missingFiles += $file
     }
 }
 
 if ($missingFiles.Count -gt 0) {
     Write-Host ""
-    Write-Host "❌ Faltan archivos necesarios: $($missingFiles -join ', ')" -ForegroundColor Red
-    Write-Host "   Asegúrate de estar en el directorio correcto del proyecto." -ForegroundColor Yellow
+    Error "Faltan $($missingFiles.Count) archivo(s): $($missingFiles -join ', ')"
     exit 1
 }
 
-Write-Host ""
-Write-Host "✅ Todos los archivos necesarios están presentes" -ForegroundColor Green
-Write-Host ""
+# ──── Elegir metodo de deploy ────
 
-# Paso 2: Elegir método de deploy
-Write-Host "Selecciona el método de deploy:" -ForegroundColor Cyan
-Write-Host "  1) rsync (recomendado - solo archivos modificados)" -ForegroundColor White
-Write-Host "  2) scp (sube todo)" -ForegroundColor White
-Write-Host "  3) Solo configurar (archivos ya subidos)" -ForegroundColor White
-Write-Host ""
+Section "Selecciona el metodo de deploy"
 
-$choice = Read-Host "Opción (1/2/3)"
+$options = @()
+$optionNum = 1
 
-if ($choice -eq "3") {
-    Write-Host ""
-    Write-Host "⏭️ Saltando subida de archivos..." -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Conecta al servidor y sigue la guía:" -ForegroundColor Cyan
-    Write-Host "  ssh $REMOTE_USER@$REMOTE_HOST" -ForegroundColor White
-    Write-Host "  cd $REMOTE_PATH" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Luego sigue los pasos en DEPLOYMENT_SERVER.md" -ForegroundColor Yellow
-    exit 0
+if ($hasGit) {
+    Write-Host "  $optionNum) 🔄 Git clone/pull en el servidor" -ForegroundColor White
+    $options += "git"
+    $optionNum++
 }
 
-# Paso 3: Subir archivos
-Write-Host ""
-Write-Host "📦 Subiendo archivos al servidor..." -ForegroundColor Yellow
-Write-Host "   Remoto: $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" -ForegroundColor White
+if ($hasPscp -and $hasPlink) {
+    Write-Host "  $optionNum) 📤 pscp (PuTTY - subir archivos)" -ForegroundColor White
+    $options += "pscp"
+    $optionNum++
+}
+
+Write-Host "  $optionNum) 🔧 Solo configurar (archivos ya subidos)" -ForegroundColor White
+$options += "configurar"
 Write-Host ""
 
-if ($choice -eq "1") {
-    # rsync
-    Write-Host "Usando rsync..." -ForegroundColor Cyan
+$choice = Read-Host "  Opcion (1-$($options.Count))"
+$choiceNum = [int]$choice - 1
+
+if ($choiceNum -lt 0 -or $choiceNum -ge $options.Count) {
     Write-Host ""
-    
-    $rsyncArgs = @(
-        "-avz",
-        "--exclude", ".git",
-        "--exclude", "__pycache__",
-        "--exclude", "*.pyc",
-        "--exclude", "venv",
-        "--exclude", ".env",
-        "--exclude", "PDFs/output/*",
-        "--exclude", "logs/*",
-        "./",
-        "$REMOTE_USER@$REMOTE_HOST`:$REMOTE_PATH/"
-    )
-    
-    try {
-        rsync @rsyncArgs
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host ""
-            Write-Host "✅ Archivos subidos exitosamente con rsync" -ForegroundColor Green
-        } else {
-            throw "rsync failed"
-        }
-    } catch {
-        Write-Host ""
-        Write-Host "❌ rsync no está disponible en tu sistema" -ForegroundColor Red
-        Write-Host "   Instala Git Bash o usa la opción 2 (scp)" -ForegroundColor Yellow
+    Error "Opcion no valida"
+    exit 1
+}
+
+$selectedMethod = $options[$choiceNum]
+
+# ──── OPCION: Git ────
+
+if ($selectedMethod -eq "git") {
+    Section "Deploy via Git"
+
+    Write-Host "  Ingresa la URL de tu repositorio GitHub:" -ForegroundColor Yellow
+    Write-Host "  Ejemplo: git@github.com:usuario/repo.git" -ForegroundColor DarkGray
+    Write-Host ""
+    $REPO_URL = Read-Host "  URL del repo"
+
+    if ([string]::IsNullOrWhiteSpace($REPO_URL)) {
+        Error "URL vacia"
         exit 1
     }
-} elseif ($choice -eq "2") {
-    # scp
-    Write-Host "Usando scp..." -ForegroundColor Cyan
+
     Write-Host ""
-    
-    # Archivos individuales primero
+    Success "Descargando codigo en el servidor..."
+
+    $commands = @(
+        "mkdir -p $REMOTE_PATH",
+        "cd $REMOTE_PATH",
+        "if [ -d '.git' ]; then git pull; else git clone $REPO_URL .; fi",
+        "ls -la"
+    )
+
+    $cmdString = $commands -join " && "
+    & $PLINK -batch -i $SSH_KEY "$REMOTE_USER@$REMOTE_HOST" $cmdString
+
+    if ($LASTEXITCODE -eq 0) {
+        Success "Codigo descargado/actualizado via Git"
+        Write-Host ""
+        Success "Ejecutando instalacion en el servidor..."
+        Write-Host ""
+        & $PLINK -batch -i $SSH_KEY "$REMOTE_USER@$REMOTE_HOST" "bash $REMOTE_PATH/install.sh"
+    } else {
+        Error "Hubo algun problema. Verifica la conexion y permisos."
+    }
+}
+
+# ──── OPCION: pscp ────
+
+elseif ($selectedMethod -eq "pscp") {
+    Section "Deploy via pscp (PuTTY)"
+
+    Write-Host ""
+    Success "Creando directorios en el servidor..."
+    & $PLINK -batch -i $SSH_KEY "$REMOTE_USER@$REMOTE_HOST" "mkdir -p ${REMOTE_PATH}/PDFs/output ${REMOTE_PATH}/PDFs/img ${REMOTE_PATH}/logs"
+
     $filesToUpload = @(
         "api_wondertech.py",
         "wondertech_pricelist_env.py",
         "requirements.txt",
-        "ecosystem.config.js"
+        "ecosystem.config.js",
+        ".env",
+        "install.sh"
     )
-    
-    foreach ($file in $filesToUpload) {
-        Write-Host "  📤 Subiendo $file..."
-        scp $file "$REMOTE_USER@$REMOTE_HOST`:$REMOTE_PATH/"
-    }
-    
-    # Crear directorios en el servidor
-    Write-Host "  📁 Creando directorios..."
-    ssh "$REMOTE_USER@$REMOTE_HOST" "mkdir -p $REMOTE_PATH/{PDFs/output,PDFs/img,logs}"
-    
-    # Subir imágenes si existen
-    if (Test-Path "PDFs\img") {
-        Write-Host "  🖼️ Subiendo imágenes..."
-        scp "PDFs\img\*" "$REMOTE_USER@$REMOTE_HOST`:$REMOTE_PATH/PDFs/img/"
-    }
-    
+
+    Write-Host "  Subiendo archivos..." -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "✅ Archivos subidos exitosamente con scp" -ForegroundColor Green
-} else {
-    Write-Host "❌ Opción no válida" -ForegroundColor Red
-    exit 1
+
+    $totalFiles = $filesToUpload.Count
+    $uploadedFiles = 0
+
+    foreach ($file in $filesToUpload) {
+        Progress $uploadedFiles $totalFiles
+        Write-Host "  $\ " -ForegroundColor DarkGray -NoNewline
+        Write-Host $file -ForegroundColor White
+        & $PSCP -batch -i $SSH_KEY $file "$REMOTE_USER@${REMOTE_HOST}:${REMOTE_PATH}/"
+        $uploadedFiles++
+    }
+
+    FinishProgress
+
+    # Subir imagenes si existen
+    if (Test-Path "PDFs\img") {
+        Write-Host "  📁 PDFs\img\" -ForegroundColor Cyan
+        & $PSCP -batch -i $SSH_KEY -r "PDFs\img\*" "$REMOTE_USER@${REMOTE_HOST}:${REMOTE_PATH}/PDFs/img/"
+    }
+
+    Success "Todos los archivos subidos exitosamente"
+    Write-Host ""
+    Success "Ejecutando instalacion en el servidor..."
+    Write-Host ""
+    & $PLINK -batch -i $SSH_KEY "$REMOTE_USER@$REMOTE_HOST" "bash $REMOTE_PATH/install.sh"
 }
 
-# Paso 4: Instrucciones siguientes
+# ──── OPCION: Solo configurar ────
+
+elseif ($selectedMethod -eq "configurar") {
+    Write-Host ""
+    Warning "Saltando subida de archivos"
+    Write-Host ""
+    Info "Conecta al servidor con:"
+    Write-Host "  plink -i `"$SSH_KEY`" $REMOTE_USER@$REMOTE_HOST" -ForegroundColor Cyan
+    Write-Host ""
+    Info "Luego sigue los pasos en DEPLOYMENT_SERVER.md"
+    exit 0
+}
+
+# ──── Final ────
+
+Header "Deploy completado!"
+
+Write-Host "  📋 Lo que sigue:" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "================================================" -ForegroundColor Cyan
-Write-Host "  ✅ Deploy de archivos completado!" -ForegroundColor Green
-Write-Host "================================================" -ForegroundColor Cyan
+Write-Host "  ┌─ 1. Verificar que PM2 esta corriendo:" -ForegroundColor DarkCyan
+Write-Host "  │   pm2 status" -ForegroundColor Cyan
+Write-Host "  │   pm2 logs WEBHOOK_PRICELIST" -ForegroundColor Cyan
+Write-Host "  │" -ForegroundColor DarkCyan
+Write-Host "  ├─ 2. Probar que responde:" -ForegroundColor DarkCyan
+Write-Host "  │   curl http://localhost:$PORT/" -ForegroundColor Cyan
+Write-Host "  │" -ForegroundColor DarkCyan
+Write-Host "  ├─ 3. Enviar al admin para configurar nginx:" -ForegroundColor DarkCyan
+Write-Host "  │   Revisar: ADMIN_REQUEST_TEMPLATE.md" -ForegroundColor Cyan
+Write-Host "  │" -ForegroundColor DarkCyan
+Write-Host "  └─ 4. Despues de configurar nginx, probar:" -ForegroundColor DarkCyan
+Write-Host "      curl https://TU_DOMINIO/pricelist/" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "📌 Próximos pasos:" -ForegroundColor Yellow
+Write-Host "  ─────────────────────────────────────────────────" -ForegroundColor DarkCyan
 Write-Host ""
-Write-Host "1. Conecta al servidor:" -ForegroundColor White
-Write-Host "   ssh $REMOTE_USER@$REMOTE_HOST" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "2. Ir al directorio:" -ForegroundColor White
-Write-Host "   cd $REMOTE_PATH" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "3. Crear archivo .env:" -ForegroundColor White
-Write-Host "   nano .env" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "4. Configurar Python:" -ForegroundColor White
-Write-Host "   python3 -m venv venv" -ForegroundColor Cyan
-Write-Host "   source venv/bin/activate" -ForegroundColor Cyan
-Write-Host "   pip install -r requirements.txt" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "5. Iniciar con PM2:" -ForegroundColor White
-Write-Host "   pm2 start ecosystem.config.js" -ForegroundColor Cyan
-Write-Host "   pm2 save" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "📖 Guía completa disponible en: DEPLOYMENT_SERVER.md" -ForegroundColor Yellow
+Write-Host "  📚 Documentacion:" -ForegroundColor Yellow
+Write-Host "  ┌─ Guia completa:        DEPLOYMENT_SERVER.md" -ForegroundColor White
+Write-Host "  ├─ Resumen rapido:       README_DEPLOY.md" -ForegroundColor White
+Write-Host "  ├─ Template para admin:  ADMIN_REQUEST_TEMPLATE.md" -ForegroundColor White
+Write-Host "  └─ Deploy sin sudo:      DEPLOY_NO_SUDO.md" -ForegroundColor White
 Write-Host ""
