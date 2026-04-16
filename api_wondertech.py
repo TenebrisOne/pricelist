@@ -652,10 +652,18 @@ def webhook_generate_by_id():
     if token_error:
         return token_error
 
-    res_model = payload.get("res_model", "product.pricelist")
-    res_id    = payload.get("res_id")
+    res_model = (
+        payload.get("res_model")
+        or payload.get("_model")
+        or "product.pricelist"
+    )
+    res_id = (
+        payload.get("res_id")
+        or payload.get("_id")
+        or payload.get("id")
+    )
     if res_id is None:
-        return jsonify({"error": "Debe enviar res_id en el payload o query string."}), 400
+        return jsonify({"error": "Debe enviar res_id en el payload o query string (res_id, _id o id)."}), 400
 
     try:
         res_id = int(res_id)
@@ -724,10 +732,18 @@ def _handle_generate_attach(lista_nombre_from_route=None):
     if token_error:
         return token_error
 
-    res_model = payload.get("res_model", "product.pricelist")
-    res_id    = payload.get("res_id")
+    res_model = (
+        payload.get("res_model")
+        or payload.get("_model")
+        or "product.pricelist"
+    )
+    res_id = (
+        payload.get("res_id")
+        or payload.get("_id")
+        or payload.get("id")
+    )
     if res_id is None:
-        return jsonify({"error": "Debe enviar res_id en el payload."}), 400
+        return jsonify({"error": "Debe enviar res_id en el payload (res_id, _id o id)."}), 400
 
     try:
         res_id = int(res_id)
@@ -744,6 +760,7 @@ def _handle_generate_attach(lista_nombre_from_route=None):
         or payload.get("nombre_lista")
         or payload.get("pricelist")
         or payload.get("name")
+        or payload.get("_name")
     )
 
     if not lista_nombre:
@@ -913,6 +930,7 @@ if __name__ == "__main__":
         ("POST /webhook/generate/<lista>",    "Generar lista especifica"),
         ("POST /webhook/generate",            "Generar con filtros"),
         ("POST /webhook/generate-attach/<l>", "Generar + guardar en Chatter"),
+        ("POST /webhook/generate-attach",      "Generar + guardar (Odoo webhook)"),
     ]
     for path, desc in endpoints:
         print(f"  \033[0;32m{path:<40s}\033[0m \033[2m|\033[0m {desc}")
