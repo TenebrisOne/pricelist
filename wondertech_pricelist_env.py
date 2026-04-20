@@ -44,7 +44,7 @@ CONFIG = {
     "empresa": "WONDERTECH",
     "telefono": "304 6285091",
     "web": "reseller.wondertech.com.co",
-    "direccion": "Cl. 99 #11B 66 OF 402 Chico norte - Bogota",
+    "direccion": "Cl. 99 #11B 66 OF 402 Chicó norte - Bogotá",
     "excluir_favoritos": True,
     "fecha_inicio_max": None,
     "fecha_fin_min": None,
