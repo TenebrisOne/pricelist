@@ -14,6 +14,7 @@ pip install reportlab python-dotenv
 
 import os
 import re
+import io
 from collections import defaultdict
 import xmlrpc.client
 from datetime import datetime
@@ -121,14 +122,36 @@ def conectar_odoo(url, db, uid, password):
     if not url:
         raise Exception("No se pudo derivar la URL base de Odoo desde *_ODOO_JSONRPC.")
 
-    common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common", allow_none=True)
-    common.version()
+    # Garantizar que uid sea entero
+    try:
+        uid = int(uid)
+    except (TypeError, ValueError):
+        raise Exception(f"El UID debe ser un numero entero valido. Valor recibido: {uid!r}")
+
+    try:
+        common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common", allow_none=True)
+        common.version()
+    except Exception as exc:
+        raise Exception(f"No se pudo conectar al servidor Odoo en {url}. Verifica la URL en el .env. Detalle: {exc}") from exc
 
     models = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object", allow_none=True)
 
-    usuario = models.execute_kw(
-        db, uid, password, "res.users", "read", [[uid]], {"fields": ["name", "login"]}
-    )
+    try:
+        usuario = models.execute_kw(
+            db, uid, password, "res.users", "read", [[uid]], {"fields": ["name", "login"]}
+        )
+    except xmlrpc.client.Fault as fault:
+        if fault.faultCode == 3:
+            raise Exception(
+                f"Acceso denegado en Odoo (Fault 3: Access Denied). "
+                f"Verifica que las credenciales en el .env sean correctas:\n"
+                f"  - UID usado: {uid}\n"
+                f"  - Base de datos: {db}\n"
+                f"  - URL: {url}\n"
+                f"  - Asegurate de usar una API Key de Odoo (NO la contrasena web).\n"
+                f"  Genera tu API Key en: Odoo > Configuracion > Usuarios > tu usuario > Claves API."
+            ) from fault
+        raise
 
     if not usuario:
         raise Exception("No fue posible validar el acceso con el UID y API Key del .env.")
@@ -383,20 +406,26 @@ def formatear_precio(precio, simbolo="$"):
 # -------------------------------------------------------------
 #  GENERACION DEL PDF - DISENO PROFESIONAL
 # -------------------------------------------------------------
-def generar_pdf(nombre_lista, productos, cfg):
+def generar_pdf(nombre_lista, productos, cfg, save_to_disk=True):
+    nombre_archivo = f"Lista_{nombre_lista.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
     output_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "PDFs", "output"
     )
-    os.makedirs(output_dir, exist_ok=True)
+    ruta_completa = os.path.join(output_dir, nombre_archivo)
+    output_target = ruta_completa
+    buffer = None
 
-    nombre_archivo = f"Lista_{nombre_lista.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
-    ruta_completa  = os.path.join(output_dir, nombre_archivo)
+    if save_to_disk:
+        os.makedirs(output_dir, exist_ok=True)
+    else:
+        buffer = io.BytesIO()
+        output_target = buffer
 
     img_header = os.path.join(os.path.dirname(os.path.abspath(__file__)), "PDFs", "img", "Captura de pantalla 2026-04-09 142117.png")
     img_footer = os.path.join(os.path.dirname(os.path.abspath(__file__)), "PDFs", "img", "Captura de pantalla 2026-04-09 142259.png")
 
     doc = SimpleDocTemplate(
-        ruta_completa,
+        output_target,
         pagesize=landscape(A4),
         leftMargin=1.0 * cm,
         rightMargin=1.0 * cm,
@@ -533,11 +562,13 @@ def generar_pdf(nombre_lista, productos, cfg):
         draw_backgrounds(canvas, doc)
 
     doc.build(story, onFirstPage=on_page_cb, onLaterPages=on_page_cb)
-    print(f"PDF generado: PDFs/output/{nombre_archivo}")
-
-    # ✅ Retorna nombre del archivo Y los bytes para adjuntar al Chatter
-    with open(ruta_completa, "rb") as f:
-        raw_bytes = f.read()
+    if save_to_disk:
+        print(f"PDF generado: PDFs/output/{nombre_archivo}")
+        with open(ruta_completa, "rb") as f:
+            raw_bytes = f.read()
+    else:
+        raw_bytes = buffer.getvalue()
+        print(f"PDF generado en memoria: {nombre_archivo}")
 
     return nombre_archivo, raw_bytes
 

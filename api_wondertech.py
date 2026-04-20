@@ -401,20 +401,14 @@ def _generate_requested_lists(requested_lists):
             }
 
         (pdf_result, pdf_stdout) = _capture_call_stdout(
-            generar_pdf, nombre_lista, productos, {**cfg, **moneda_cfg}
+            generar_pdf, nombre_lista, productos, {**cfg, **moneda_cfg}, False
         )
         _log_captured_stdout(pdf_stdout, rid)
         nombre_archivo, raw_bytes = pdf_result
-        ruta_archivo = OUTPUT_DIR / nombre_archivo
-        if not ruta_archivo.exists():
-            raise FileNotFoundError(
-                f"No se encontro el PDF generado para la lista '{nombre_lista}'"
-            )
 
         generated.append({
             "lista":        nombre_lista,
             "archivo":      nombre_archivo,
-            "ruta_archivo": str(ruta_archivo),
             "raw_bytes":    raw_bytes,
             "productos":    len(productos),
             "moneda":       moneda_cfg.get("moneda", cfg.get("moneda", "COP")),
@@ -475,21 +469,15 @@ def _generate_requested_list_ids(requested_ids):
             }
 
         (pdf_result, pdf_stdout) = _capture_call_stdout(
-            generar_pdf, lista_nombre, productos, {**cfg, **moneda_cfg}
+            generar_pdf, lista_nombre, productos, {**cfg, **moneda_cfg}, False
         )
         _log_captured_stdout(pdf_stdout, rid)
         nombre_archivo, raw_bytes = pdf_result
-        ruta_archivo = OUTPUT_DIR / nombre_archivo
-        if not ruta_archivo.exists():
-            raise FileNotFoundError(
-                f"No se encontro el PDF generado para la lista ID '{list_id}'"
-            )
 
         generated.append({
             "lista":        lista_nombre,
             "lista_id":     int(list_id),
             "archivo":      nombre_archivo,
-            "ruta_archivo": str(ruta_archivo),
             "raw_bytes":    raw_bytes,
             "productos":    len(productos),
             "moneda":       moneda_cfg.get("moneda", cfg.get("moneda", "COP")),
@@ -587,7 +575,7 @@ def _handle_generation(route_list=None, default_to_all=False, default_pdf=False)
         pdf_info = generated[0]
         _logger.info("[rid=%s] RESPONSE tipo=pdf archivo='%s'", rid, pdf_info["archivo"])
         return send_file(
-            pdf_info["ruta_archivo"],
+            io.BytesIO(pdf_info["raw_bytes"]),
             mimetype="application/pdf",
             as_attachment=True,
             download_name=pdf_info["archivo"],
@@ -687,7 +675,7 @@ def webhook_generate_by_id():
 
         pdf_info = generated[0]
         return send_file(
-            pdf_info["ruta_archivo"],
+            io.BytesIO(pdf_info["raw_bytes"]),
             mimetype="application/pdf",
             as_attachment=True,
             download_name=pdf_info["archivo"],
@@ -763,6 +751,10 @@ def _handle_generate_attach(lista_nombre_from_route=None):
         or payload.get("_name")
     )
 
+    # Guardamos la conexion precargada para reutilizarla al adjuntar
+    _cached_models  = None
+    _cached_cfg     = None
+
     if not lista_nombre:
         try:
             cfg_lookup = _build_runtime_config()
@@ -775,8 +767,12 @@ def _handle_generate_attach(lista_nombre_from_route=None):
             )
             _log_captured_stdout(conn_stdout, rid)
             models_lookup, _ = conn_result
+            # Reutilizar esta conexion mas adelante para evitar doble autenticacion
+            _cached_models = models_lookup
+            _cached_cfg    = cfg_lookup
             lista_nombre = _get_record_name_by_id(models_lookup, cfg_lookup, res_model, res_id)
         except Exception as exc:
+            _logger.exception("[rid=%s] ERROR resolviendo lista por ID: %s", rid, str(exc))
             return jsonify({"error": f"No se pudo resolver la lista por ID: {str(exc)}"}), 500
 
     if not lista_nombre:
@@ -810,6 +806,7 @@ def _handle_generate_attach(lista_nombre_from_route=None):
                 _logger.info("[rid=%s] PRIORITY ID usada lista_id=%d", rid, res_id)
         except Exception as exc:
             last_error = str(exc)
+            _logger.exception("[rid=%s] ERROR generando por ID: %s", rid, str(exc))
 
     # Si por ID no genero nada, solo hacer fallback por nombre cuando
     # realmente no hubo coincidencia por ID.
@@ -827,6 +824,7 @@ def _handle_generate_attach(lista_nombre_from_route=None):
                 cfg, generated, skipped = _generate_requested_lists([candidate])
             except Exception as exc:
                 last_error = str(exc)
+                _logger.exception("[rid=%s] ERROR fallback por nombre '%s': %s", rid, candidate, str(exc))
                 continue
             if generated:
                 lista_usada = candidate
@@ -853,11 +851,17 @@ def _handle_generate_attach(lista_nombre_from_route=None):
     raw_bytes = pdf_info["raw_bytes"]
     filename  = pdf_info["archivo"]
 
-    (conn_result, conn_stdout) = _capture_call_stdout(
-        conectar_odoo, cfg["url"], cfg["db"], cfg["uid"], cfg["password"]
-    )
-    _log_captured_stdout(conn_stdout, rid)
-    models, uid = conn_result
+    # Reutilizar conexion precargada si ya existe, evitando doble autenticacion
+    if _cached_models is not None and _cached_cfg is not None:
+        models = _cached_models
+        cfg    = _cached_cfg
+        _logger.info("[rid=%s] REUSING cached Odoo connection", rid)
+    else:
+        (conn_result, conn_stdout) = _capture_call_stdout(
+            conectar_odoo, cfg["url"], cfg["db"], cfg["uid"], cfg["password"]
+        )
+        _log_captured_stdout(conn_stdout, rid)
+        models, uid = conn_result
     try:
         attachment_id = _attach_pdf_to_record(
             models, cfg,
@@ -867,11 +871,12 @@ def _handle_generate_attach(lista_nombre_from_route=None):
             message_subject=message_subject,
         )
     except Exception as exc:
+        _logger.exception("[rid=%s] ERROR adjuntando PDF en chatter: %s", rid, str(exc))
         return jsonify({"error": f"Error al adjuntar el PDF en Odoo: {str(exc)}"}), 500
 
     _logger.info("[rid=%s] ATTACH_OK lista_resuelta='%s' archivo='%s'", rid, lista_usada or lista_nombre, filename)
     return send_file(
-        pdf_info["ruta_archivo"],
+        io.BytesIO(pdf_info["raw_bytes"]),
         mimetype="application/pdf",
         as_attachment=True,
         download_name=filename,
